@@ -10,6 +10,10 @@ The native tests passed with the inherited Windows environment. A reduced MCP ch
 
 The public remote is reachable and has no `HEAD` yet. GitHub CLI sign-in and Git's credential helper require credential storage that the managed process cannot access. Authenticate in a regular Windows PowerShell window, verify the active GitHub identity and remote write access, then proceed with the authorized initial push. The next ready product task is LPM-001.
 
+## 2026-11-23 · LPM-004 · Done
+
+The maintainer pushed `main` from their Windows PowerShell session using a command-scoped Git trust setting for the repository. `git ls-remote` confirmed that GitHub's default branch and local `main` both point to `2dfe3fa`. The first [hosted CI run](https://github.com/sergiogallegos/logix-project-mcp/actions/runs/45275063747) completed successfully for that commit. The next ready product task is LPM-001.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.
