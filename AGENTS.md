@@ -14,6 +14,7 @@
 - `src/logix_project_mcp/server.py` defines the stdio server, user-selected project path, and MCP tools.
 - `src/logix_project_mcp/project.py` handles L5X parsing and SDK-backed snapshots of ACD and L5K files.
 - `src/logix_project_mcp/_sdk_worker.py` hosts the Rockwell SDK in a child process.
+- `src/logix_project_mcp/doctor.py` checks local prerequisites and verifies a read through an MCP subprocess.
 - `tests/test_stdio.py` checks installation and request handling through a real MCP connection.
 
 ## Skills

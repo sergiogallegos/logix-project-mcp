@@ -15,10 +15,9 @@ The default test suite starts a real local MCP process, initializes the session,
 Install the native prerequisites from [README.md](README.md#requirements). Point the optional SDK smoke test at a Rockwell sample project or another saved copy you are authorized to inspect. Run once per native format you want to verify. The test sends `get_project` through MCP stdio and computes a source file hash before and after.
 
 ```powershell
-$env:DOTNET_ROOT = 'C:\Program Files\dotnet'
 $env:LOGIX_PROJECT_MCP_TEST_PROJECT = 'C:\path\to\Sample.ACD'
 python -m unittest discover -s tests -v
 Remove-Item Env:LOGIX_PROJECT_MCP_TEST_PROJECT
 ```
 
-Report the project revision, SDK wheel version, and the formats exercised. An SDK export run directly in Python checks a different entry point from the MCP smoke test. Record the two outcomes independently when diagnosing a native failure.
+The test inherits the launching PowerShell environment. Use [the diagnostic command](README.md#check-the-installation) to compare that setup with the reduced MCP client environment. Report the project revision, SDK wheel version, and the formats exercised. An SDK export run directly in Python checks a different entry point from the MCP smoke test. Record both outcomes when diagnosing a native failure.

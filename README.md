@@ -41,7 +41,7 @@ $sdk = Join-Path $env:PUBLIC 'Documents\Studio 5000\Logix Designer SDK\python\lo
 
 ## Connect an agent
 
-Add a local stdio server in your MCP client. The example uses the `mcpServers` configuration format. Replace both paths with the absolute paths on your machine.
+Add a local stdio server in your MCP client. Replace both paths in the `mcpServers` example with the absolute paths on your machine. For `.ACD` or `.L5K` on a standard 64-bit Windows setup, forward the value of `$env:ProgramFiles` from the Windows session where the SDK works. A client with full environment inheritance can use that existing value.
 
 ```json
 {
@@ -49,19 +49,30 @@ Add a local stdio server in your MCP client. The example uses the `mcpServers` c
     "logix-project-mcp": {
       "command": "C:/path/to/logix-project-mcp/.venv/Scripts/python.exe",
       "args": ["-m", "logix_project_mcp.server", "--project", "C:/path/to/MyProject.ACD"],
-      "env": { "DOTNET_ROOT": "C:/Program Files/dotnet" }
+      "env": { "ProgramFiles": "C:\\Program Files" }
     }
   }
 }
 ```
-
-`DOTNET_ROOT` gives the Rockwell SDK the .NET installation path. Adjust it for your installation. For native files, configure the MCP client to inherit the Windows user environment. A client that replaces that environment with a minimal allowlist can start the server yet time out when the SDK opens a project. Use the [Windows SDK smoke test](BUILD.md#verify-rockwell-sdk-integration-on-windows) to confirm the local installation. A full `.L5X` export only needs the Python dependencies.
 
 | Tool | Response |
 | --- | --- |
 | `get_project` | Controller metadata and the program and routine tree |
 | `list_tags` | Names, data types, and descriptions for controller tags or a specified program's tags |
 | `read_routine` | Routine logic and comments in L5X XML |
+
+## Check the installation
+
+Run `logix-project-mcp-doctor` from the same Windows PowerShell session you use to launch your MCP client. Without a project, it reports Python architecture, package versions, standard Logix Designer installations, .NET runtimes, and the local SDK service. Pass a saved sample to test an actual `get_project` call over MCP stdio. You can also invoke it directly from the virtual environment:
+
+```powershell
+.\.venv\Scripts\python.exe -m logix_project_mcp.doctor
+.\.venv\Scripts\python.exe -m logix_project_mcp.doctor --project 'C:\path\to\Sample.ACD' --compare-launch-env
+```
+
+The comparison tries the inherited Windows environment first. It then tries the Python MCP client's reduced environment with `ProgramFiles` and any existing `DOTNET_ROOT` forwarded. If the inherited launch passes and the reduced launch warns about a timeout, configure your client to inherit the working environment. For a nonstandard .NET installation, set `DOTNET_ROOT` to the runtime matching Python's architecture and repeat the check before updating your client environment.
+
+Pass a full `.L5X` export with `--project` to test the SDK-free path. The diagnostic prints setup and launch results without printing project contents or environment values. Its exit code is `0` when the requested primary checks pass and `1` when a required check or primary MCP probe fails. A failed reduced comparison prints a warning when the inherited launch passes.
 
 ## Contribute
 
