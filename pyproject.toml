@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "logix-project-mcp"
+version = "0.1.0"
+description = "Local MCP server for saved Studio 5000 Logix Designer projects"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = ["defusedxml>=0.7.1,<1", "mcp>=1.30,<2"]
+
+[project.scripts]
+logix-project-mcp = "logix_project_mcp.server:main"
