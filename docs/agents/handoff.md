@@ -56,6 +56,12 @@ Added [`search_project` and `find_references`](../mcp-contract.md#scoped-search-
 
 The SDK-free wheel passed the test suite and `pip check`. Rockwell's revision 17.00 `DayOfWeek.L5X` returned eight scoped references to `TestDateTime`. On Windows 11 build 26200 with Python 3.12.10 x64 and Rockwell's Python wheel 2.0.2, SDK-generated `.ACD` and `.L5K` fixtures at revision 38.02 each returned two references to the selected program tag. All source hashes stayed unchanged. LPM-014 is next.
 
+## 2026-11-24 · LPM-014 · Done · Codex on `main`
+
+Added [`compare_projects`](../mcp-contract.md#project-comparison) for a baseline and candidate selected at launch. It reports component identities and unified diffs by scope, with readable Ladder and Structured Text context. The role and source SHA-256 identify each file even when their names match. Synthetic stdio tests covered unchanged export metadata, changed settings and values, additions and removals, routine edits, protected metadata, and invalid selections.
+
+The SDK-free wheel passed the test suite and `pip check`. A one-line edit in a copy of an SDK-generated `.L5X` produced one routine change. The revision 38.02 `.ACD`/`.L5K` and `.L5K`/`.L5X` comparisons of the same fixture reported zero changes. Native checks used Windows 11 build 26200, Python 3.12.10 x64, and Rockwell Python wheel 2.0.2. All compared source hashes stayed unchanged. LPM-030 is now ready. LPM-015 is next in board order.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.

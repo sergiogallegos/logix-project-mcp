@@ -66,6 +66,9 @@ Add a local stdio server in your MCP client. Replace both paths in the `mcpServe
 | `read_routine` | Saved routine source, language-specific sections, and protection status |
 | `search_project` | Scoped declarations, comments, and resolved references matching a query |
 | `find_references` | Locations that refer to a specific declaration, including through alias chains |
+| `compare_projects` | Scoped changes between the baseline and candidate selected at launch |
+
+To enable comparison, keep `--project` set to the baseline and add `--compare-project` followed by the candidate path in the MCP configuration's `args` array.
 
 See the [MCP tool contract](docs/mcp-contract.md) for arguments, structured results, and error codes.
 

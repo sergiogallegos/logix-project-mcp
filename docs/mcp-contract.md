@@ -13,6 +13,7 @@ Call `tools/list` to discover the JSON Schema for each tool's arguments and succ
 | `read_routine` | Required `program` and `routine` strings | `result` string, `source_sha256`, and [routine inspection](#routine-inspection) |
 | `search_project` | Required `query`. Optional `kind`, `program`, and [paging arguments](#scoped-search-and-cross-references). | Saved source identity, `matches`, and `next_offset` |
 | `find_references` | Required `name`. Optional `kind`, `program`, and [paging arguments](#scoped-search-and-cross-references). | Saved source identity, `matches`, and `next_offset` |
+| `compare_projects` | Optional `scope` when a candidate was [selected at launch](#project-comparison) | `before`, `after`, scoped `changes`, and `protected_components` |
 
 Names match without regard to case. The server rejects arguments outside the tool's schema. The server selects the project through `--project` at launch. Restart it to select another file.
 
@@ -78,6 +79,16 @@ Each match reports its `kind`, `location`, a short `excerpt`, and its `symbol` w
 Unqualified tag operands resolve to the current program before controller scope. Explicit `Program:<program>.<tag>` operands resolve in that program. Structure and array access resolve to the declared base tag. Array index expressions can also contain tag references. Alias resolution stops at unresolved targets or cycles. Comments and quoted strings are excluded from operand matching. Visible descriptions, rung comments, inline logic comments, and diagram text are searchable as comments. Protected routine headers remain searchable as declarations, while their bodies contribute zero matches. Tag operand matching is lexical and uses exported declarations. Use Studio 5000 for instruction-specific operand validation, indirect target resolution, and read/write analysis. [Rockwell Logix 5000 Import/Export reference](https://literature.rockwellautomation.com/idc/groups/literature/documents/rm/1756-rm014_-en-p.pdf)
 
 Both tools return `file`, `format`, `software_revision`, and `source_sha256` for the saved snapshot. `limit` defaults to 50 and accepts 1–200. `offset` defaults to 0 and accepts up to 2,147,483,647. Keep the query and scope fixed between pages. Send `next_offset` as `offset` and the first page's `source_sha256` as `expected_source_sha256`. A newer save then returns `project_changed`, and a `null` `next_offset` marks the last page.
+
+## Project comparison
+
+Set `--project` to the baseline and add `--compare-project` with the candidate path in the server's launch arguments. Each can be an `.ACD`, `.L5K`, or full `.L5X`. With two paths configured, `tools/list` includes `compare_projects` and `get_capabilities` reports the `comparison_project` selection. Inspection tools continue to use the baseline.
+
+Call `compare_projects` with `{}` for all supported scopes. Use `{"scope":{"kind":"controller"}}` for controller scope or `{"scope":{"kind":"program","program":"Main"}}` for one program. A program present on either side can be reviewed by name. The response labels the snapshots as `before` and `after`, each with file name, format, controller, software revision, and source SHA-256. The roles and hashes distinguish same-named projects.
+
+Components match by kind and case-insensitive qualified name. The controller is matched by its role. Changes cover controller settings, tasks, modules, user-defined types, Add-On Instructions, programs, scoped tags, and routines. Each change includes its identity, an `added`, `removed`, or `modified` status, and a unified `xml_diff`. Ladder and Structured Text changes can also include a `source_diff` with rung or line positions and surrounding text.
+
+Comparison normalizes XML indentation and attribute order and ignores export headers, common author and timestamp attributes, and `Use` context markers. Decorated tag values take precedence when an export also includes a redundant raw or L5K value. Saved settings such as the controller serial number, tag values, and schedule or rung order are compared. Protected components are listed in `protected_components` and compared using available metadata. [Rockwell Logix 5000 Import/Export reference](https://literature.rockwellautomation.com/idc/groups/literature/documents/rm/1756-rm014_-en-p.pdf)
 
 ## Capability reporting
 

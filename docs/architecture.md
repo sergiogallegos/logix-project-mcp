@@ -1,6 +1,6 @@
 # Architecture
 
-The MCP client launches `logix-project-mcp` with a project path chosen by the user. The server resolves and validates the path at startup. All tools operate on that project for the life of the server process.
+The MCP client launches `logix-project-mcp` with a project path chosen by the user. The server resolves and validates the path at startup. Inspection tools use that baseline for the life of the process. The optional `--compare-project` path selects a second saved project for comparison.
 
 ```mermaid
 flowchart LR
@@ -18,6 +18,7 @@ flowchart LR
 - `inventory.py` extracts scoped tag and routine identities and component metadata from the verified L5X snapshot.
 - `routines.py` extracts numbered source text, diagram structure, and protection status from saved routines.
 - `search.py` indexes visible declarations by scope, resolves references from saved routine sections, and produces bounded search pages.
+- `comparison.py` normalizes the two L5X projections, matches components by name and scope, and emits XML and readable source diffs.
 - `project.py` copies the selected source into a per-read temporary directory and checks the file identity, size, modification time, and copied bytes before using the snapshot. Each request starts from the saved file at the selected path.
 - Native reads use an SDK subprocess to convert the snapshot to L5X. It keeps Rockwell runtime output off MCP stdio. Cancellation and the export timeout stop and reap the worker before the temporary directory is removed and the next read begins.
 - `_sdk_worker.py` calls Rockwell's Python SDK from Windows to open the snapshot and save a detailed L5X export. The SDK installation and activation belong to the host machine.

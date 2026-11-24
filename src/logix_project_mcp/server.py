@@ -1,4 +1,4 @@
-"""Serve one user-selected, saved project over MCP stdio."""
+"""Serve user-selected saved projects over MCP stdio."""
 
 import argparse
 import asyncio
@@ -15,6 +15,7 @@ from mcp.server.stdio import stdio_server
 from mcp.types import CallToolResult, TextContent, Tool, ToolAnnotations
 from pydantic import ConfigDict, Field, TypeAdapter, ValidationError
 
+from .comparison import ComparisonReport, compare
 from .inventory import (
     ProjectInventory,
     RoutineSummary,
@@ -74,6 +75,22 @@ class ReferenceArguments(SearchPageArguments):
     program: NotRequired[str | None]
 
 
+class ControllerComparisonScope(ToolArguments):
+    kind: Literal["controller"]
+
+
+class ProgramComparisonScope(ToolArguments):
+    kind: Literal["program"]
+    program: Annotated[str, Field(min_length=1, pattern=r"\S")]
+
+
+ComparisonScope = ControllerComparisonScope | ProgramComparisonScope
+
+
+class CompareArguments(ToolArguments, total=False):
+    scope: ComparisonScope | None
+
+
 class ToolErrorDetails(TypedDict):
     code: ToolErrorCode
     message: str
@@ -97,6 +114,7 @@ class Capabilities(TypedDict):
     read_only: Literal[True]
     platform: str
     rockwell_sdk_module_found: bool
+    comparison_project: NotRequired[ProjectIdentity]
 
 
 class ProgramSummary(TypedDict):
@@ -134,7 +152,17 @@ class SearchResult(SnapshotResult, ProjectIdentity):
     next_offset: int | None
 
 
-def create_server(path: Path) -> Server:
+class ComparisonSource(SnapshotResult, ProjectIdentity):
+    controller: str | None
+    software_revision: str | None
+
+
+class ComparisonResult(ComparisonReport):
+    before: ComparisonSource
+    after: ComparisonSource
+
+
+def create_server(path: Path, compare_path: Path | None = None) -> Server:
     server = Server(
         "logix-project-mcp",
         instructions="Inspect the saved Studio 5000 project selected at server startup.",
@@ -148,7 +176,7 @@ def create_server(path: Path) -> Server:
 
     async def get_capabilities() -> Capabilities:
         """Report the selected file, supported formats, and inspection requirements."""
-        return {
+        capabilities: Capabilities = {
             "schema_version": 1,
             "project": {"file": path.name, "format": project_format},
             "formats": [
@@ -163,6 +191,11 @@ def create_server(path: Path) -> Server:
             "platform": sys.platform,
             "rockwell_sdk_module_found": find_spec("logix_designer_sdk") is not None,
         }
+        if compare_path is not None:
+            capabilities["comparison_project"] = {
+                "file": compare_path.name, "format": cast(ProjectFormat, compare_path.suffix[1:].lower()),
+            }
+        return capabilities
 
     async def get_project() -> ProjectSummary:
         """Get controller metadata and the programs and routines in the saved project."""
@@ -259,9 +292,20 @@ def create_server(path: Path) -> Server:
         )
         return search_result(snapshot, results)
 
+    async def compare_projects(scope: ComparisonScope | None = None) -> ComparisonResult:
+        """Compare the baseline and candidate saved projects selected at server startup."""
+        assert compare_path is not None
+        async with project_read_lock:
+            baseline = await read_project(path)
+            candidate = baseline if path == compare_path else await read_project(compare_path)
+        kind = scope["kind"] if scope else "all"
+        program = scope["program"] if scope and scope["kind"] == "program" else None
+        report = await asyncio.to_thread(compare, baseline.controller, candidate.controller, kind, program)
+        return {"before": comparison_source(path, baseline), "after": comparison_source(compare_path, candidate), **report}
+
     error_schema = TypeAdapter(ToolErrorDetails).json_schema()
     tools = {}
-    for handler, request_type, result_type in (
+    registrations = (
         (get_project, ToolArguments, ProjectSummary),
         (get_inventory, ToolArguments, InventoryResult),
         (list_tags, ListTagsArguments, TagsResult),
@@ -269,7 +313,10 @@ def create_server(path: Path) -> Server:
         (search_project, SearchArguments, SearchResult),
         (find_references, ReferenceArguments, SearchResult),
         (get_capabilities, ToolArguments, Capabilities),
-    ):
+    )
+    if compare_path is not None:
+        registrations += ((compare_projects, CompareArguments, ComparisonResult),)
+    for handler, request_type, result_type in registrations:
         arguments = TypeAdapter(request_type)
         tool = Tool(
             name=handler.__name__,
@@ -319,22 +366,37 @@ def find_named(items: Iterable[Element], kind: str, name: str) -> Element:
     raise ProjectReadError("not_found", f"{kind} {name!r} was not found.")
 
 
-async def run_stdio(path: Path) -> None:
-    server = create_server(path)
+def comparison_source(path: Path, snapshot: ProjectSnapshot) -> ComparisonSource:
+    return {
+        "file": path.name,
+        "format": cast(ProjectFormat, path.suffix[1:].lower()),
+        "source_sha256": snapshot.source_sha256,
+        "controller": snapshot.controller.get("Name"),
+        "software_revision": snapshot.root.get("SoftwareRevision"),
+    }
+
+
+async def run_stdio(path: Path, compare_path: Path | None = None) -> None:
+    server = create_server(path, compare_path)
     async with stdio_server() as (reader, writer):
         await server.run(reader, writer, server.create_initialization_options())
+
+
+def selected_project(parser: argparse.ArgumentParser, option: str, path: Path) -> Path:
+    resolved = path.resolve()
+    if resolved.suffix.lower() not in PROJECT_EXTENSIONS or not resolved.is_file():
+        parser.error(f"{option} must point to an existing .ACD, .L5K, or .L5X file")
+    return resolved
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Inspect a saved Studio 5000 project over MCP.")
     parser.add_argument("--project", required=True, type=Path, help="Path to an ACD, L5K, or full L5X project")
+    parser.add_argument("--compare-project", type=Path, help="Candidate saved project for offline comparison")
     args = parser.parse_args()
-    path = args.project.resolve()
-
-    if path.suffix.lower() not in PROJECT_EXTENSIONS or not path.is_file():
-        parser.error("--project must point to an existing .ACD, .L5K, or .L5X file")
-
-    asyncio.run(run_stdio(path))
+    path = selected_project(parser, "--project", args.project)
+    compare_path = selected_project(parser, "--compare-project", args.compare_project) if args.compare_project else None
+    asyncio.run(run_stdio(path, compare_path))
 
 
 if __name__ == "__main__":
