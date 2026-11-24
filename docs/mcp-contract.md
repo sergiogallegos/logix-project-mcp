@@ -11,6 +11,8 @@ Call `tools/list` to discover the JSON Schema for each tool's arguments and succ
 | `get_inventory` | Empty object or omitted | File identity, source revision, and the [project inventory](#project-inventory) |
 | `list_tags` | Optional `program` string. Omit it or use `null` for controller scope. | `result` array of tag objects with `name`, `data_type`, and `description`, plus `source_sha256` |
 | `read_routine` | Required `program` and `routine` strings | `result` string, `source_sha256`, and [routine inspection](#routine-inspection) |
+| `search_project` | Required `query`. Optional `kind`, `program`, and [paging arguments](#scoped-search-and-cross-references). | Saved source identity, `matches`, and `next_offset` |
+| `find_references` | Required `name`. Optional `kind`, `program`, and [paging arguments](#scoped-search-and-cross-references). | Saved source identity, `matches`, and `next_offset` |
 
 Names match without regard to case. The server rejects arguments outside the tool's schema. The server selects the project through `--project` at launch. Restart it to select another file.
 
@@ -56,6 +58,26 @@ Diagram entries contain `kind`, `attributes`, `text`, and `children`. The attrib
 | `unsupported` | An explanation for an unknown language or missing content section, plus the available L5X XML string in `result` and text content |
 
 A supported content section may be present and empty. Routine and program lookup failures use `not_found`.
+
+## Scoped search and cross-references
+
+`search_project` matches names case-insensitively and exactly, including qualified names such as `Program:Main.Counter`. Comment queries match a literal word or phrase at word boundaries. `kind` defaults to `all` and also accepts `tag`, `symbol`, `routine`, `comment`, or `reference`. `symbol` searches user-defined types and Add-On Instruction declarations. Use `program` to restrict the **locations** returned to one program. In reference searches, a name can match the direct symbol or one of its alias targets.
+
+`find_references` selects a declaration by its bare `name`, `kind`, and `program`. `kind` defaults to `tag` and also accepts `routine`, `data_type`, or `add_on_instruction`. Supply `program` for a program tag or routine. Controller tags and controller-level types use the default `null` program. This tool searches across all programs for references to the selected declaration.
+
+Each match reports its `kind`, `location`, a short `excerpt`, and its `symbol` when available. The location identifies controller or program scope and includes the originating declaration or routine. Routine locations include saved rung, line, sheet, diagram element ID, and a one-based text offset when applicable, plus the zero-based section and its exported online-edit type. For references, `reference_kind` identifies the relationship, `symbol` identifies the direct declaration, and `alias_targets` lists subsequent declarations reached through aliases.
+
+| `reference_kind` | Supported source locations |
+| --- | --- |
+| `operand` | Declared base tags found in Ladder and Structured Text, diagram `Operand` attributes, and embedded Structured Text in Function Block or Sequential Function Chart content |
+| `alias_target` | `AliasFor` on controller or program tags |
+| `data_type` | Tag `DataType` attributes naming a declared user-defined type or Add-On Instruction |
+| `routine_call` | A named first operand of `JSR` resolved in the calling program |
+| `instruction_call` | Textual calls to declared Add-On Instructions |
+
+Unqualified tag operands resolve to the current program before controller scope. Explicit `Program:<program>.<tag>` operands resolve in that program. Structure and array access resolve to the declared base tag. Array index expressions can also contain tag references. Alias resolution stops at unresolved targets or cycles. Comments and quoted strings are excluded from operand matching. Visible descriptions, rung comments, inline logic comments, and diagram text are searchable as comments. Protected routine headers remain searchable as declarations, while their bodies contribute zero matches. Tag operand matching is lexical and uses exported declarations. Use Studio 5000 for instruction-specific operand validation, indirect target resolution, and read/write analysis. [Rockwell Logix 5000 Import/Export reference](https://literature.rockwellautomation.com/idc/groups/literature/documents/rm/1756-rm014_-en-p.pdf)
+
+Both tools return `file`, `format`, `software_revision`, and `source_sha256` for the saved snapshot. `limit` defaults to 50 and accepts 1–200. `offset` defaults to 0 and accepts up to 2,147,483,647. Keep the query and scope fixed between pages. Send `next_offset` as `offset` and the first page's `source_sha256` as `expected_source_sha256`. A newer save then returns `project_changed`, and a `null` `next_offset` marks the last page.
 
 ## Capability reporting
 

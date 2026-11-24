@@ -64,6 +64,8 @@ Add a local stdio server in your MCP client. Replace both paths in the `mcpServe
 | `get_inventory` | Controller, task schedules, programs, scoped tags, modules, user-defined types, and Add-On Instruction metadata |
 | `list_tags` | Names, data types, and descriptions for controller tags or a specified program's tags |
 | `read_routine` | Saved routine source, language-specific sections, and protection status |
+| `search_project` | Scoped declarations, comments, and resolved references matching a query |
+| `find_references` | Locations that refer to a specific declaration, including through alias chains |
 
 See the [MCP tool contract](docs/mcp-contract.md) for arguments, structured results, and error codes.
 

@@ -7,7 +7,7 @@ import sys
 from collections.abc import Iterable
 from importlib.util import find_spec
 from pathlib import Path
-from typing import Annotated, Literal, TypedDict, cast, get_args
+from typing import Annotated, Literal, NotRequired, TypedDict, cast, get_args
 from xml.etree.ElementTree import Element, tostring
 
 from mcp.server.lowlevel import Server
@@ -33,11 +33,14 @@ from .project import (
     read_project,
 )
 from .routines import RoutineInspection, inspect_routine
+from .search import ProjectSearch, SearchKind, SearchMatch, SymbolKind, page
 
 READ_ONLY = ToolAnnotations(readOnlyHint=True, idempotentHint=True, openWorldHint=False)
 ERROR_KEY = "logix-project-mcp/error"
 ERROR_SCHEMA_KEY = "logix-project-mcp/error-schema"
 ToolErrorCode = ProjectErrorCode | Literal["invalid_arguments", "unknown_tool"]
+SourceHash = Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
+SearchQuery = Annotated[str, Field(min_length=1, max_length=200, pattern=r"\S")]
 
 
 class ToolArguments(TypedDict):
@@ -51,6 +54,24 @@ class ListTagsArguments(ToolArguments, total=False):
 class ReadRoutineArguments(ToolArguments):
     program: str
     routine: str
+
+
+class SearchPageArguments(ToolArguments, total=False):
+    limit: Annotated[int, Field(ge=1, le=200)]
+    offset: Annotated[int, Field(ge=0, le=2_147_483_647)]
+    expected_source_sha256: SourceHash | None
+
+
+class SearchArguments(SearchPageArguments):
+    query: SearchQuery
+    kind: NotRequired[SearchKind]
+    program: NotRequired[str | None]
+
+
+class ReferenceArguments(SearchPageArguments):
+    name: SearchQuery
+    kind: NotRequired[SymbolKind]
+    program: NotRequired[str | None]
 
 
 class ToolErrorDetails(TypedDict):
@@ -84,7 +105,7 @@ class ProgramSummary(TypedDict):
 
 
 class SnapshotResult(TypedDict):
-    source_sha256: Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
+    source_sha256: SourceHash
 
 
 class ProjectSummary(SnapshotResult, ProjectIdentity):
@@ -105,6 +126,12 @@ class TagsResult(SnapshotResult):
 class RoutineResult(SnapshotResult):
     result: str
     inspection: RoutineInspection
+
+
+class SearchResult(SnapshotResult, ProjectIdentity):
+    software_revision: str | None
+    matches: list[SearchMatch]
+    next_offset: int | None
 
 
 def create_server(path: Path) -> Server:
@@ -190,6 +217,48 @@ def create_server(path: Path) -> Server:
             "inspection": inspection,
         }
 
+    async def search_snapshot(expected_source_sha256: str | None) -> ProjectSnapshot:
+        snapshot = await load()
+        if expected_source_sha256 is not None and expected_source_sha256 != snapshot.source_sha256:
+            raise ProjectReadError("project_changed", "The saved project has changed. Start a new search page sequence.")
+        return snapshot
+
+    def search_result(snapshot: ProjectSnapshot, results: tuple[list[SearchMatch], int | None]) -> SearchResult:
+        matches, next_offset = results
+        return {
+            "file": path.name,
+            "format": project_format,
+            "software_revision": snapshot.root.get("SoftwareRevision"),
+            "source_sha256": snapshot.source_sha256,
+            "matches": matches,
+            "next_offset": next_offset,
+        }
+
+    async def search_project(
+        query: str, kind: SearchKind = "all", program: str | None = None,
+        limit: int = 50, offset: int = 0, expected_source_sha256: str | None = None,
+    ) -> SearchResult:
+        """Search scoped declarations, exact symbols, and comments in a saved project."""
+        snapshot = await search_snapshot(expected_source_sha256)
+        if program is not None:
+            selected = find_named(snapshot.controller.findall("Programs/Program"), "Program", program)
+            program = selected.get("Name", program)
+        results = await asyncio.to_thread(
+            lambda: page(ProjectSearch(snapshot.controller).search(query.strip(), kind, program), offset, limit)
+        )
+        return search_result(snapshot, results)
+
+    async def find_references(
+        name: str, kind: SymbolKind = "tag", program: str | None = None,
+        limit: int = 50, offset: int = 0, expected_source_sha256: str | None = None,
+    ) -> SearchResult:
+        """Find saved source locations that refer to one declared symbol, including through aliases."""
+        snapshot = await search_snapshot(expected_source_sha256)
+        results = await asyncio.to_thread(
+            lambda: page(ProjectSearch(snapshot.controller).references(name.strip(), kind, program), offset, limit)
+        )
+        return search_result(snapshot, results)
+
     error_schema = TypeAdapter(ToolErrorDetails).json_schema()
     tools = {}
     for handler, request_type, result_type in (
@@ -197,6 +266,8 @@ def create_server(path: Path) -> Server:
         (get_inventory, ToolArguments, InventoryResult),
         (list_tags, ListTagsArguments, TagsResult),
         (read_routine, ReadRoutineArguments, RoutineResult),
+        (search_project, SearchArguments, SearchResult),
+        (find_references, ReferenceArguments, SearchResult),
         (get_capabilities, ToolArguments, Capabilities),
     ):
         arguments = TypeAdapter(request_type)

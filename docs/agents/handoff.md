@@ -50,6 +50,12 @@ Extended [`read_routine`](../mcp-contract.md#routine-inspection) with numbered l
 
 The SDK-free wheel passed the test suite and `pip check`. Routine projections matched Rockwell's full `DayOfWeek.L5X`, `ST_Motion_Example.L5X`, `FBDLevelControlSimulation.L5X`, and `SFC_GearChange.L5X` samples. An SDK-generated Structured Text fixture passed through MCP from `.ACD` and `.L5K` at Logix Designer revision 38.02, using Windows 11 build 26200, Python 3.12.10 x64, and Rockwell wheel 2.0.2. All source hashes stayed unchanged. Protected records were verified with synthetic exports. LPM-013 and LPM-014 are ready, with LPM-013 next.
 
+## 2026-11-24 · LPM-013 · Done · Codex on `main`
+
+Added [`search_project` and `find_references`](../mcp-contract.md#scoped-search-and-cross-references) with scope, saved source identity, and bounded pages. The index resolves declared base symbols and exposes alias chains, source positions, and the reference relationships documented in the contract. Synthetic stdio tests covered name collisions, qualified operands, false substring matches, quoted text and comments, alias cycles, protected logic, and a 230-reference sequence with stale-page rejection.
+
+The SDK-free wheel passed the test suite and `pip check`. Rockwell's revision 17.00 `DayOfWeek.L5X` returned eight scoped references to `TestDateTime`. On Windows 11 build 26200 with Python 3.12.10 x64 and Rockwell's Python wheel 2.0.2, SDK-generated `.ACD` and `.L5K` fixtures at revision 38.02 each returned two references to the selected program tag. All source hashes stayed unchanged. LPM-014 is next.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.
