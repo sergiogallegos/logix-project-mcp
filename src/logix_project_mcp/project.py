@@ -9,20 +9,30 @@ from contextlib import suppress
 from hashlib import sha256
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, BinaryIO, NamedTuple
+from typing import Any, BinaryIO, Literal, NamedTuple, get_args
 from xml.etree.ElementTree import Element, ParseError
 
 from anyio import CancelScope
 from defusedxml import ElementTree
 from defusedxml.common import DefusedXmlException
 
-PROJECT_EXTENSIONS = {".acd", ".l5k", ".l5x"}
+ProjectFormat = Literal["acd", "l5k", "l5x"]
+PROJECT_EXTENSIONS = {f".{format_name}" for format_name in get_args(ProjectFormat)}
 SDK_TIMEOUT_SECONDS = 90
 COPY_CHUNK_SIZE = 1024 * 1024
+
+ProjectErrorCode = Literal[
+    "project_unavailable", "project_changed", "invalid_project", "unsupported_platform",
+    "sdk_timeout", "sdk_error", "not_found",
+]
 
 
 class ProjectReadError(Exception):
     """An expected project read failure with a message for the MCP client."""
+
+    def __init__(self, code: ProjectErrorCode, message: str) -> None:
+        super().__init__(message)
+        self.code = code
 
 
 class ProjectSnapshot(NamedTuple):
@@ -39,7 +49,7 @@ async def read_project(path: Path) -> ProjectSnapshot:
     """Inspect a verified copy and return the SHA-256 of its source bytes."""
     native = path.suffix.lower() != ".l5x"
     if native and sys.platform != "win32":
-        raise ProjectReadError("ACD and L5K inspection requires the Rockwell SDK on Windows.")
+        raise ProjectReadError("unsupported_platform", "ACD and L5K inspection requires the Rockwell SDK on Windows.")
 
     try:
         with TemporaryDirectory(prefix="logix-project-mcp-") as directory:
@@ -52,16 +62,19 @@ async def read_project(path: Path) -> ProjectSnapshot:
             root = await finish_file_operation(asyncio.to_thread(parse_l5x, xml))
     except SourceChanged as exc:
         raise ProjectReadError(
+            "project_changed",
             f"{path.name} changed while it was being copied. Retry after the save completes."
         ) from exc
-    except (OSError, ParseError, DefusedXmlException) as exc:
-        raise ProjectReadError(f"Could not read {path.name}: {exc}") from exc
+    except OSError as exc:
+        raise ProjectReadError("project_unavailable", f"Could not read {path.name}: {exc}") from exc
+    except (ParseError, DefusedXmlException) as exc:
+        raise ProjectReadError("invalid_project", f"Could not read {path.name}: {exc}") from exc
 
     controller = root.find("Controller")
     if root.tag != "RSLogix5000Content" or controller is None:
-        raise ProjectReadError("Expected a Logix Designer project with a controller.")
+        raise ProjectReadError("invalid_project", "Expected a Logix Designer project with a controller.")
     if root.get("TargetType", "Controller") != "Controller":
-        raise ProjectReadError("Select a full project export to inspect its controller.")
+        raise ProjectReadError("invalid_project", "Select a full project export to inspect its controller.")
     return ProjectSnapshot(root, controller, fingerprint)
 
 
@@ -97,7 +110,7 @@ def hash_source(source: BinaryIO, size: int, destination: BinaryIO | None = None
 def copy_snapshot(path: Path, snapshot: Path) -> str:
     expected = path.lstat()
     if not stat.S_ISREG(expected.st_mode):
-        raise ProjectReadError(f"{path.name} is no longer a regular saved project file.")
+        raise ProjectReadError("project_unavailable", f"{path.name} is no longer a regular saved project file.")
     version = file_version(expected)
     with path.open("rb", buffering=0) as source:
         if file_version(os.fstat(source.fileno())) != version:
@@ -134,6 +147,7 @@ async def export_snapshot(snapshot: Path, output: Path, source_name: str) -> Non
                 await process.wait()
         except TimeoutError as exc:
             raise ProjectReadError(
+                "sdk_timeout",
                 f"Logix Designer SDK did not finish exporting {source_name} "
                 f"within {SDK_TIMEOUT_SECONDS} seconds."
             ) from exc
@@ -148,4 +162,4 @@ async def export_snapshot(snapshot: Path, output: Path, source_name: str) -> Non
             stderr.seek(0)
             detail = stderr.read(8192).decode("utf-8", errors="replace").strip()
             detail = detail or f"worker exited with code {process.returncode}"
-            raise ProjectReadError(f"Logix Designer SDK could not export {source_name}: {detail}")
+            raise ProjectReadError("sdk_error", f"Logix Designer SDK could not export {source_name}: {detail}")

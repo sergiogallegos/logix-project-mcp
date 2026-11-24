@@ -8,7 +8,7 @@ A local MCP server for saved Rockwell Studio 5000 Logix Designer projects. The f
 | `.L5K` | Imports a temporary copy with the same SDK and inspects its `.L5X` export |
 | `.L5X` | Parses a temporary copy of a full project export without the Rockwell SDK |
 
-The server takes a fresh snapshot of the selected saved file on each tool call. Every successful structured response includes `source_sha256`, the SHA-256 of the saved bytes used for that read. Use it to match results from the same saved version. If the file changes during copying, retry after the save completes. A Studio 5000 Tools menu entry for sharing the current project path and a reviewed offline editing workflow are planned.
+Each inspection tool takes a fresh snapshot of the selected saved file. Its successful structured response includes `source_sha256`, the SHA-256 of the saved bytes used for that read. Use it to match results from the same saved version. If the file changes during copying, retry after the save completes. A Studio 5000 Tools menu entry for sharing the current project path and a reviewed offline editing workflow are planned.
 
 See the [compatibility matrix](docs/compatibility.md) for tested formats and revisions, SDK requirements, and instructions to reproduce the checks.
 
@@ -59,9 +59,12 @@ Add a local stdio server in your MCP client. Replace both paths in the `mcpServe
 
 | Tool | Response |
 | --- | --- |
+| `get_capabilities` | Contract version, selected file, and format requirements |
 | `get_project` | Controller metadata and the program and routine tree |
 | `list_tags` | Names, data types, and descriptions for controller tags or a specified program's tags |
 | `read_routine` | Routine logic and comments in L5X XML |
+
+See the [MCP tool contract](docs/mcp-contract.md) for arguments, structured results, and error codes.
 
 ## Check the installation
 

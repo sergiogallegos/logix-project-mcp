@@ -36,8 +36,9 @@ class ProjectTests(unittest.IsolatedAsyncioTestCase):
             return digest
 
         with patch.object(reader, "hash_source", side_effect=change_after_copy):
-            with self.assertRaisesRegex(reader.ProjectReadError, "changed while it was being copied"):
+            with self.assertRaisesRegex(reader.ProjectReadError, "changed while it was being copied") as failure:
                 await reader.read_project(self.source)
+        self.assertEqual(failure.exception.code, "project_changed")
 
         self.assertEqual(self.source.stat().st_mtime_ns, original.st_mtime_ns)
         result = await reader.read_project(self.source)
@@ -122,8 +123,9 @@ class WorkerTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_timeout_reaps_stalled_worker_and_next_read_succeeds(self):
         with patch.object(reader, "SDK_TIMEOUT_SECONDS", 0.2):
-            with self.assertRaisesRegex(reader.ProjectReadError, "did not finish exporting Selected.ACD"):
+            with self.assertRaisesRegex(reader.ProjectReadError, "did not finish exporting Selected.ACD") as failure:
                 await reader.read_project(self.source)
+        self.assertEqual(failure.exception.code, "sdk_timeout")
         await self.check_recovery()
 
     async def test_mcp_style_cancellation_reaps_worker_and_next_read_succeeds(self):

@@ -32,6 +32,12 @@ Published the [compatibility matrix](../compatibility.md) with the tested versio
 
 The 26.00 Rockwell `.ACD` returned `SetRSLinxEdition` on this host. The missing-wheel case returned installation guidance through MCP, and the diagnostic command exited with code 1. The checks preserved every source hash. The fixture recipe generated all three formats, and the SDK-free suite and `pip check` passed. LPM-015 is now ready. The next task in board order is LPM-010.
 
+## 2026-11-24 · LPM-010 · Done · Codex on `main`
+
+Published the [MCP tool contract](../mcp-contract.md) and added `get_capabilities` with contract version 1. The original tools retain their result fields and text content shapes. `get_project` adds a normalized format, and the read tools retain their source SHA-256. Expected failures return `isError` and a documented code in `_meta`. Calls with undeclared arguments return `invalid_arguments`.
+
+The SDK-free wheel passed discovery, valid calls, invalid arguments, lookup failures, malformed exports, and recovery through MCP stdio. The missing-wheel probe verified the capability flag and `sdk_error` diagnostic with the source hash unchanged. The native stdio tests passed on Windows 11 build 26200 with Python 3.12.10 x64 and Rockwell Python wheel 2.0.2 using Logix Designer 38.02 `.ACD` and `.L5K` samples. Both formats preserved their source hashes. The wheel build and `pip check` passed. LPM-011 and LPM-012 are ready, with LPM-011 next in board order.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.

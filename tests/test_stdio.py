@@ -5,9 +5,11 @@ import os
 import sys
 import unittest
 from datetime import timedelta
+from importlib.util import find_spec
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from jsonschema import validate
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
@@ -26,6 +28,15 @@ NATIVE_TEST_PROJECT = os.environ.get("LOGIX_PROJECT_MCP_TEST_PROJECT")
 
 
 class StdioTests(unittest.IsolatedAsyncioTestCase):
+    def assert_tool_error(self, result, code, error_schema):
+        self.assertTrue(result.isError)
+        self.assertIsNone(result.structuredContent)
+        details = result.meta["logix-project-mcp/error"]
+        validate(details, error_schema)
+        self.assertEqual(set(details), {"code", "message"})
+        self.assertEqual(details["code"], code)
+        self.assertEqual(result.content[0].text, details["message"])
+
     async def test_inspect_selected_project_without_modifying_it(self):
         with TemporaryDirectory() as directory:
             project = Path(directory) / "Sample.L5X"
@@ -36,25 +47,52 @@ class StdioTests(unittest.IsolatedAsyncioTestCase):
             )
 
             async with stdio_client(server) as (reader, writer), ClientSession(reader, writer) as client:
-                await client.initialize()
-                tools = (await client.list_tools()).tools
-                self.assertEqual({tool.name for tool in tools}, {"get_project", "list_tags", "read_routine"})
-                for tool in tools:
-                    self.assertIn("source_sha256", tool.outputSchema["required"])
-                schemas = {tool.name: tool.outputSchema["properties"] for tool in tools}
+                self.assertIsNotNone((await client.initialize()).capabilities.tools)
+                tools = {tool.name: tool for tool in (await client.list_tools()).tools}
+                self.assertEqual(set(tools), {"get_capabilities", "get_project", "list_tags", "read_routine"})
+                error_schema = tools["get_project"].meta["logix-project-mcp/error-schema"]
+                for tool in tools.values():
+                    self.assertTrue(tool.annotations.readOnlyHint)
+                    self.assertEqual(tool.meta["logix-project-mcp/error-schema"], error_schema)
+                    self.assertFalse(tool.inputSchema["additionalProperties"])
+                for name in ("get_project", "list_tags", "read_routine"):
+                    self.assertIn("source_sha256", tools[name].outputSchema["required"])
+                self.assertEqual(tools["get_project"].inputSchema["properties"], {})
+                self.assertEqual(tools["get_capabilities"].inputSchema["properties"], {})
+                self.assertEqual(set(tools["list_tags"].inputSchema["properties"]), {"program"})
+                self.assertFalse(tools["list_tags"].inputSchema.get("required"))
+                self.assertEqual(set(tools["read_routine"].inputSchema["required"]), {"program", "routine"})
+                schemas = {name: tool.outputSchema["properties"] for name, tool in tools.items()}
                 self.assertEqual(schemas["list_tags"]["result"]["type"], "array")
                 self.assertEqual(schemas["read_routine"]["result"]["type"], "string")
 
+                capabilities = await client.call_tool("get_capabilities")
+                self.assertFalse(capabilities.isError, capabilities.content)
+                self.assertEqual(capabilities.structuredContent, {
+                    "schema_version": 1,
+                    "project": {"file": "Sample.L5X", "format": "l5x"},
+                    "formats": [
+                        {"format": name, "requires_windows": native, "requires_rockwell_sdk": native}
+                        for name, native in [("acd", True), ("l5k", True), ("l5x", False)]
+                    ],
+                    "read_only": True,
+                    "platform": sys.platform,
+                    "rockwell_sdk_module_found": find_spec("logix_designer_sdk") is not None,
+                })
+
                 summary, tags, controller_tags, routine = await asyncio.gather(
                     client.call_tool("get_project"),
-                    client.call_tool("list_tags", {"program": "MainProgram"}),
-                    client.call_tool("list_tags"),
+                    client.call_tool("list_tags", {"program": "mainprogram"}),
+                    client.call_tool("list_tags", {"program": None}),
                     client.call_tool("read_routine", {"program": "MainProgram", "routine": "MainRoutine"}),
                 )
                 for read in (summary, tags, controller_tags, routine):
                     self.assertFalse(read.isError, read.content)
                     self.assertEqual(read.structuredContent["source_sha256"], hashlib.sha256(PROJECT).hexdigest())
                 self.assertEqual(summary.structuredContent["controller"], "Sample")
+                self.assertEqual(summary.structuredContent["file"], "Sample.L5X")
+                self.assertEqual(summary.structuredContent["format"], "l5x")
+                self.assertEqual(summary.structuredContent["software_revision"], "38.00")
                 self.assertEqual(summary.structuredContent["programs"][0]["name"], "MainProgram")
                 self.assertEqual(tags.structuredContent["result"][0]["name"], "ProgramTag")
                 self.assertEqual(controller_tags.structuredContent["result"][0]["name"], "ControllerTag")
@@ -64,14 +102,35 @@ class StdioTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(project.read_bytes(), PROJECT)
 
                 missing = await client.call_tool("list_tags", {"program": "Missing"})
-                self.assertTrue(missing.isError)
+                self.assert_tool_error(missing, "not_found", error_schema)
+                missing_routine = await client.call_tool(
+                    "read_routine", {"program": "MainProgram", "routine": "Missing"}
+                )
+                self.assert_tool_error(missing_routine, "not_found", error_schema)
+                for name, arguments in (
+                    ("read_routine", {"program": "MainProgram"}),
+                    ("list_tags", {"program": 4}),
+                    ("get_project", {"path": "Other.L5X"}),
+                ):
+                    with self.subTest(tool=name, arguments=arguments):
+                        invalid = await client.call_tool(name, arguments)
+                        self.assert_tool_error(invalid, "invalid_arguments", error_schema)
+                unknown = await client.call_tool("missing_tool")
+                self.assert_tool_error(unknown, "unknown_tool", error_schema)
 
                 project.unlink()
                 other = project.with_name("Other.L5X")
                 other.write_bytes(PROJECT.replace(b'Name="Sample"', b'Name="Other"'))
                 unavailable = await client.call_tool("get_project")
-                self.assertTrue(unavailable.isError)
+                self.assert_tool_error(unavailable, "project_unavailable", error_schema)
                 self.assertIn("Could not read Sample.L5X", unavailable.content[0].text)
+                capabilities_after_removal = await client.call_tool("get_capabilities")
+                self.assertFalse(capabilities_after_removal.isError, capabilities_after_removal.content)
+                self.assertEqual(capabilities_after_removal.structuredContent, capabilities.structuredContent)
+
+                project.write_bytes(b"<RSLogix5000Content>")
+                malformed = await client.call_tool("get_project")
+                self.assert_tool_error(malformed, "invalid_project", error_schema)
 
                 saved = PROJECT.replace(b'Name="Sample"', b'Name="Updated"')
                 project.write_bytes(saved)
@@ -101,11 +160,18 @@ class StdioTests(unittest.IsolatedAsyncioTestCase):
             ):
                 await client.initialize()
                 self.assertTrue((await client.list_tools()).tools)
+                capabilities = await client.call_tool("get_capabilities")
+                self.assertFalse(capabilities.isError, capabilities.content)
+                self.assertEqual(capabilities.structuredContent["project"], {
+                    "file": project.name, "format": project.suffix[1:].lower(),
+                })
+                self.assertTrue(capabilities.structuredContent["rockwell_sdk_module_found"])
                 for _ in range(2):
                     summary = await client.call_tool("get_project")
                     self.assertFalse(summary.isError, summary.content)
                     self.assertTrue(summary.structuredContent["controller"])
                     self.assertTrue(summary.structuredContent["software_revision"])
+                    self.assertEqual(summary.structuredContent["format"], project.suffix[1:].lower())
                     self.assertEqual(summary.structuredContent["source_sha256"], original.hex())
         finally:
             with project.open("rb") as source:

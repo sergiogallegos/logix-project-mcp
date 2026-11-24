@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
-dependencies = ["anyio>=4.5,<5", "defusedxml>=0.7.1,<1", "mcp>=1.30,<2"]
+dependencies = ["anyio>=4.5,<5", "defusedxml>=0.7.1,<1", "mcp>=1.30,<2", "pydantic>=2.11,<3"]
 
 [project.scripts]
 logix-project-mcp = "logix_project_mcp.server:main"

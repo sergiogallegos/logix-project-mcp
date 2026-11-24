@@ -8,7 +8,7 @@ python -m pip check
 python -m unittest discover -s tests -v
 ```
 
-The default test suite starts a real local MCP process, initializes the session, and calls all three tools with a synthetic project. It also exercises concurrent reads, source changes, cancellation, and timeout recovery with a stand-in SDK subprocess. To build a distributable wheel, run `python -m pip wheel --no-deps --wheel-dir dist .`.
+The default test suite starts a real local MCP process, initializes the session, and verifies tool schemas, capabilities, reads, and errors with a synthetic project. It also exercises concurrent reads, source changes, cancellation, and timeout recovery with a stand-in SDK subprocess. To build a distributable wheel, run `python -m pip wheel --no-deps --wheel-dir dist .`.
 
 ## Verify Rockwell SDK integration on Windows
 
