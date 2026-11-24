@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import json
 import sys
+from collections.abc import Iterable
 from importlib.util import find_spec
 from pathlib import Path
 from typing import Annotated, Literal, TypedDict, cast, get_args
@@ -18,6 +19,7 @@ from .inventory import (
     ProjectInventory,
     RoutineSummary,
     TagSummary,
+    component_entries,
     project_inventory,
     routine_summary,
     tag_summary,
@@ -30,6 +32,7 @@ from .project import (
     ProjectSnapshot,
     read_project,
 )
+from .routines import RoutineInspection, inspect_routine
 
 READ_ONLY = ToolAnnotations(readOnlyHint=True, idempotentHint=True, openWorldHint=False)
 ERROR_KEY = "logix-project-mcp/error"
@@ -101,6 +104,7 @@ class TagsResult(SnapshotResult):
 
 class RoutineResult(SnapshotResult):
     result: str
+    inspection: RoutineInspection
 
 
 def create_server(path: Path) -> Server:
@@ -146,7 +150,9 @@ def create_server(path: Path) -> Server:
             "programs": [
                 {
                     "name": program.get("Name"),
-                    "routines": [routine_summary(routine) for routine in program.findall("Routines/Routine")],
+                    "routines": [
+                        routine_summary(routine) for routine in component_entries(program, "Routines", "Routine")
+                    ],
                 }
                 for program in controller.findall("Programs/Program")
             ],
@@ -166,18 +172,23 @@ def create_server(path: Path) -> Server:
     async def list_tags(program: str | None = None) -> tuple[list[TextContent], TagsResult]:
         """List controller tags, or tags in the named program when provided."""
         _, controller, fingerprint = await load()
-        scope = controller if program is None else find_named(controller, "Programs/Program", program)
+        scope = controller if program is None else find_named(controller.findall("Programs/Program"), "Program", program)
         tags = [tag_summary(tag) for tag in scope.findall("Tags/Tag")]
         content = [TextContent(type="text", text=json.dumps(tag, ensure_ascii=False, indent=2)) for tag in tags]
         return content, {"result": tags, "source_sha256": fingerprint}
 
     async def read_routine(program: str, routine: str) -> tuple[list[TextContent], RoutineResult]:
-        """Read the L5X for a routine in the named program, including logic and comments."""
+        """Inspect saved routine logic, comments, and source protection in the named program."""
         _, controller, fingerprint = await load()
-        selected_program = find_named(controller, "Programs/Program", program)
-        selected_routine = find_named(selected_program, "Routines/Routine", routine)
-        xml = tostring(selected_routine, encoding="unicode").strip()
-        return [TextContent(type="text", text=xml)], {"result": xml, "source_sha256": fingerprint}
+        selected_program = find_named(controller.findall("Programs/Program"), "Program", program)
+        selected_routine = find_named(component_entries(selected_program, "Routines", "Routine"), "Routine", routine)
+        inspection = inspect_routine(selected_program.get("Name"), selected_routine)
+        xml = "" if inspection["status"] == "protected" else tostring(selected_routine, encoding="unicode").strip()
+        return [TextContent(type="text", text=xml or inspection["message"] or "")], {
+            "result": xml,
+            "source_sha256": fingerprint,
+            "inspection": inspection,
+        }
 
     error_schema = TypeAdapter(ToolErrorDetails).json_schema()
     tools = {}
@@ -230,11 +241,11 @@ def tool_error(code: ToolErrorCode, message: str) -> CallToolResult:
     )
 
 
-def find_named(parent: Element, selector: str, name: str) -> Element:
-    for item in parent.findall(selector):
+def find_named(items: Iterable[Element], kind: str, name: str) -> Element:
+    for item in items:
         if item.get("Name", "").casefold() == name.casefold():
             return item
-    raise ProjectReadError("not_found", f"{selector.rsplit('/', 1)[-1]} {name!r} was not found.")
+    raise ProjectReadError("not_found", f"{kind} {name!r} was not found.")
 
 
 async def run_stdio(path: Path) -> None:

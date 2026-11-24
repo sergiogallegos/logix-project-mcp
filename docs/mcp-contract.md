@@ -10,13 +10,13 @@ Call `tools/list` to discover the JSON Schema for each tool's arguments and succ
 | `get_project` | Empty object or omitted | `file`, `format`, `controller`, `processor_type`, `software_revision`, `programs`, `source_sha256` |
 | `get_inventory` | Empty object or omitted | File identity, source revision, and the [project inventory](#project-inventory) |
 | `list_tags` | Optional `program` string. Omit it or use `null` for controller scope. | `result` array of tag objects with `name`, `data_type`, and `description`, plus `source_sha256` |
-| `read_routine` | Required `program` and `routine` strings | `result` string containing routine L5X XML, plus `source_sha256` |
+| `read_routine` | Required `program` and `routine` strings | `result` string, `source_sha256`, and [routine inspection](#routine-inspection) |
 
 Names match without regard to case. The server rejects arguments outside the tool's schema. The server selects the project through `--project` at launch. Restart it to select another file.
 
 `file` is the selected file's basename. `format` is one of `acd`, `l5k`, or `l5x`. `software_revision` comes from the L5X `SoftwareRevision` attribute and may be `null`. `source_sha256` is the lowercase SHA-256 digest of the saved file snapshot. Compare hashes to determine whether reads used the same saved bytes.
 
-The original three tool names and their result fields remain available. `get_project` adds `format`. Text content still contains the project summary as JSON, one JSON object per listed tag, or the routine as raw XML.
+The original three tool names and their result fields remain available. `get_project` adds `format`. Text content contains the project summary as JSON, one JSON object per listed tag, or the routine XML when available.
 
 ## Project inventory
 
@@ -35,6 +35,27 @@ The original three tool names and their result fields remain available. `get_pro
 Controller tags use their bare names as `qualified_name`. Program tags and routines use `Program:<program>.<name>` within their respective inventories. Each tag carries its `scope`. Arrays retain export order, including the task schedule and child program references. Absent collections are empty arrays and missing optional fields are `null`. Values such as task `rate`, `priority`, `watchdog`, and revisions retain their exported text. User-defined types include entries marked `Class="User"` and entries whose class is absent in the export.
 
 Encoded routines and Add-On Instructions appear with their visible metadata and `protected: true`. The flag also reflects recognized encryption markers on XML records. The inventory contains component metadata and omits tag values, routine bodies, and encoded payloads. [Rockwell Logix 5000 Import/Export reference](https://literature.rockwellautomation.com/idc/groups/literature/documents/rm/1756-rm014_-en-p.pdf)
+
+## Routine inspection
+
+`read_routine` resolves the requested program and routine without regard to case. `inspection` includes the exported names, `qualified_name`, the routine `language` code from `Type`, an optional description, `status`, and any readable `sections`. Each section preserves its XML attributes. Multiple sections keep export order, so `OnlineEditType` distinguishes original, pending, and test edits.
+
+| Language | Section contents |
+| --- | --- |
+| `RLL` | `rungs` with saved `number`, rung `type`, instruction `text`, and optional `comment` |
+| `ST` | `lines` with saved `number` and `text`, including inline comments and blank lines |
+| `FBD` | `elements` such as sheets, blocks, wires, and text boxes, with nested entries and their exported attributes |
+| `SFC` | `elements` such as steps, actions, transitions, branches, and directed links, with nested entries and their exported attributes |
+
+Diagram entries contain `kind`, `attributes`, `text`, and `children`. The attributes retain sheet numbers, IDs, coordinates, connection endpoints, and pin names when present. Rung, line, and diagram text retains its characters and spacing after standard XML decoding and line-ending normalization. The source hash covers the exact saved file bytes. [Rockwell Logix 5000 Import/Export reference](https://literature.rockwellautomation.com/idc/groups/literature/documents/rm/1756-rm014_-en-p.pdf)
+
+| `inspection.status` | Contents |
+| --- | --- |
+| `readable` | Language-specific sections and the legacy L5X XML string in `result` and text content |
+| `protected` | Visible metadata and a protection message. `sections` is empty, `result` is an empty string, and text content carries the message. |
+| `unsupported` | An explanation for an unknown language or missing content section, plus the available L5X XML string in `result` and text content |
+
+A supported content section may be present and empty. Routine and program lookup failures use `not_found`.
 
 ## Capability reporting
 

@@ -44,6 +44,12 @@ Added [`get_inventory`](../mcp-contract.md#project-inventory) for controller met
 
 The SDK-free wheel passed the test suite and `pip check`. Rockwell's 17.00 `Add_On_Instructions_Samples.L5X` matched the exported schedule, program tags, 3 user-defined types, and 26 Add-On Instructions. `Coord_Motion_Drill_Cycle_Infeed_Blend.L5X` verified event-trigger fields. MCP returned inventory for the 38.02 synthetic `.ACD`, `.L5K`, and `.L5X` with unchanged source hashes. Native probes used Windows 11 build 26200, Python 3.12.10 x64, and Rockwell Python wheel 2.0.2. Protected-content coverage used synthetic exports. LPM-012 is next.
 
+## 2026-11-24 · LPM-012 · Done · Codex on `main`
+
+Extended [`read_routine`](../mcp-contract.md#routine-inspection) with numbered ladder and Structured Text source, structured Function Block and Sequential Function Chart elements, and readable, protected, and unsupported statuses. Available XML stays in `result`. Protected routines return metadata and a protection message. Synthetic stdio tests covered duplicate routine names, exact whitespace and comments, separate online-edit sections, protection, and absent or unsupported content.
+
+The SDK-free wheel passed the test suite and `pip check`. Routine projections matched Rockwell's full `DayOfWeek.L5X`, `ST_Motion_Example.L5X`, `FBDLevelControlSimulation.L5X`, and `SFC_GearChange.L5X` samples. An SDK-generated Structured Text fixture passed through MCP from `.ACD` and `.L5K` at Logix Designer revision 38.02, using Windows 11 build 26200, Python 3.12.10 x64, and Rockwell wheel 2.0.2. All source hashes stayed unchanged. Protected records were verified with synthetic exports. LPM-013 and LPM-014 are ready, with LPM-013 next.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.
