@@ -2,7 +2,7 @@
 
 **1.0 outcome.** An engineer can select the project they have open in Studio 5000, share its latest saved `.ACD` with an MCP client, inspect and compare the project, review a proposed offline edit, and reopen a validated `.ACD` copy or import the reviewed `.L5X` component into Studio 5000. The server also supports the documented `.L5K` and `.L5X` workflows.
 
-**Next task.** [LPM-011](tasks.md#lpm-011) covers controller and project inventory. See the [MCP tool contract](../mcp-contract.md) for the published schemas and capability reporting.
+**Next task.** [LPM-012](tasks.md#lpm-012) covers routine inspection by language. See the [MCP tool contract](../mcp-contract.md#project-inventory) for the project inventory schema.
 
 Follow the [agent workflow](README.md) and record acceptance evidence in the [handoff log](handoff.md). Each task links to its deliverable and verification criteria.
 
@@ -14,7 +14,7 @@ Follow the [agent workflow](README.md) and record acceptance evidence in the [ha
 | [LPM-003](tasks.md#lpm-003) | Format and revision compatibility matrix | LPM-001, LPM-002 | Done | Codex on `main` |
 | [LPM-004](tasks.md#lpm-004) | GitHub bootstrap and first hosted CI run | — | Done | — |
 | [LPM-010](tasks.md#lpm-010) | Stable MCP schemas and capability reporting | — | Done | Codex on `main` |
-| [LPM-011](tasks.md#lpm-011) | Controller and project inventory | LPM-010 | Ready | — |
+| [LPM-011](tasks.md#lpm-011) | Controller and project inventory | LPM-010 | Done | Codex on `main` |
 | [LPM-012](tasks.md#lpm-012) | Routine inspection by language | LPM-010 | Ready | — |
 | [LPM-013](tasks.md#lpm-013) | Scoped search and cross-references | LPM-011, LPM-012 | Planned | — |
 | [LPM-014](tasks.md#lpm-014) | Reviewable project comparison | LPM-002, LPM-011, LPM-012 | Planned | — |

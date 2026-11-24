@@ -38,6 +38,12 @@ Published the [MCP tool contract](../mcp-contract.md) and added `get_capabilitie
 
 The SDK-free wheel passed discovery, valid calls, invalid arguments, lookup failures, malformed exports, and recovery through MCP stdio. The missing-wheel probe verified the capability flag and `sdk_error` diagnostic with the source hash unchanged. The native stdio tests passed on Windows 11 build 26200 with Python 3.12.10 x64 and Rockwell Python wheel 2.0.2 using Logix Designer 38.02 `.ACD` and `.L5K` samples. Both formats preserved their source hashes. The wheel build and `pip check` passed. LPM-011 and LPM-012 are ready, with LPM-011 next in board order.
 
+## 2026-11-24 · LPM-011 · Done · Codex on `main`
+
+Added [`get_inventory`](../mcp-contract.md#project-inventory) for controller metadata, scheduled tasks, programs, scoped tags, modules, user-defined types, and Add-On Instruction metadata. It preserves schedule order and qualifies program tags and routines by program. Synthetic stdio tests checked repeated names, absent sections, invalid arguments, and encoded and encrypted records. The inventory surfaced their metadata without returning protected payloads or routine bodies.
+
+The SDK-free wheel passed the test suite and `pip check`. Rockwell's 17.00 `Add_On_Instructions_Samples.L5X` matched the exported schedule, program tags, 3 user-defined types, and 26 Add-On Instructions. `Coord_Motion_Drill_Cycle_Infeed_Blend.L5X` verified event-trigger fields. MCP returned inventory for the 38.02 synthetic `.ACD`, `.L5K`, and `.L5X` with unchanged source hashes. Native probes used Windows 11 build 26200, Python 3.12.10 x64, and Rockwell Python wheel 2.0.2. Protected-content coverage used synthetic exports. LPM-012 is next.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.

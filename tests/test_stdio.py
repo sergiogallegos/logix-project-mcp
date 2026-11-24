@@ -49,13 +49,15 @@ class StdioTests(unittest.IsolatedAsyncioTestCase):
             async with stdio_client(server) as (reader, writer), ClientSession(reader, writer) as client:
                 self.assertIsNotNone((await client.initialize()).capabilities.tools)
                 tools = {tool.name: tool for tool in (await client.list_tools()).tools}
-                self.assertEqual(set(tools), {"get_capabilities", "get_project", "list_tags", "read_routine"})
+                self.assertEqual(set(tools), {
+                    "get_capabilities", "get_inventory", "get_project", "list_tags", "read_routine",
+                })
                 error_schema = tools["get_project"].meta["logix-project-mcp/error-schema"]
                 for tool in tools.values():
                     self.assertTrue(tool.annotations.readOnlyHint)
                     self.assertEqual(tool.meta["logix-project-mcp/error-schema"], error_schema)
                     self.assertFalse(tool.inputSchema["additionalProperties"])
-                for name in ("get_project", "list_tags", "read_routine"):
+                for name in ("get_inventory", "get_project", "list_tags", "read_routine"):
                     self.assertIn("source_sha256", tools[name].outputSchema["required"])
                 self.assertEqual(tools["get_project"].inputSchema["properties"], {})
                 self.assertEqual(tools["get_capabilities"].inputSchema["properties"], {})

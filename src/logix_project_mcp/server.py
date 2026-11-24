@@ -14,6 +14,14 @@ from mcp.server.stdio import stdio_server
 from mcp.types import CallToolResult, TextContent, Tool, ToolAnnotations
 from pydantic import ConfigDict, Field, TypeAdapter, ValidationError
 
+from .inventory import (
+    ProjectInventory,
+    RoutineSummary,
+    TagSummary,
+    project_inventory,
+    routine_summary,
+    tag_summary,
+)
 from .project import (
     PROJECT_EXTENSIONS,
     ProjectErrorCode,
@@ -67,11 +75,6 @@ class Capabilities(TypedDict):
     rockwell_sdk_module_found: bool
 
 
-class RoutineSummary(TypedDict):
-    name: str | None
-    type: str | None
-
-
 class ProgramSummary(TypedDict):
     name: str | None
     routines: list[RoutineSummary]
@@ -88,10 +91,8 @@ class ProjectSummary(SnapshotResult, ProjectIdentity):
     programs: list[ProgramSummary]
 
 
-class TagSummary(TypedDict):
-    name: str | None
-    data_type: str | None
-    description: str | None
+class InventoryResult(SnapshotResult, ProjectIdentity, ProjectInventory):
+    software_revision: str | None
 
 
 class TagsResult(SnapshotResult):
@@ -145,27 +146,28 @@ def create_server(path: Path) -> Server:
             "programs": [
                 {
                     "name": program.get("Name"),
-                    "routines": [
-                        {"name": routine.get("Name"), "type": routine.get("Type")}
-                        for routine in program.findall("Routines/Routine")
-                    ],
+                    "routines": [routine_summary(routine) for routine in program.findall("Routines/Routine")],
                 }
                 for program in controller.findall("Programs/Program")
             ],
+        }
+
+    async def get_inventory() -> InventoryResult:
+        """Inventory the controller, scheduled programs, tags, modules, UDTs, and Add-On Instructions."""
+        root, controller, fingerprint = await load()
+        return {
+            "file": path.name,
+            "format": project_format,
+            "source_sha256": fingerprint,
+            "software_revision": root.get("SoftwareRevision"),
+            **project_inventory(controller),
         }
 
     async def list_tags(program: str | None = None) -> tuple[list[TextContent], TagsResult]:
         """List controller tags, or tags in the named program when provided."""
         _, controller, fingerprint = await load()
         scope = controller if program is None else find_named(controller, "Programs/Program", program)
-        tags: list[TagSummary] = [
-            {
-                "name": tag.get("Name"),
-                "data_type": tag.get("DataType"),
-                "description": tag.findtext("Description"),
-            }
-            for tag in scope.findall("Tags/Tag")
-        ]
+        tags = [tag_summary(tag) for tag in scope.findall("Tags/Tag")]
         content = [TextContent(type="text", text=json.dumps(tag, ensure_ascii=False, indent=2)) for tag in tags]
         return content, {"result": tags, "source_sha256": fingerprint}
 
@@ -181,6 +183,7 @@ def create_server(path: Path) -> Server:
     tools = {}
     for handler, request_type, result_type in (
         (get_project, ToolArguments, ProjectSummary),
+        (get_inventory, ToolArguments, InventoryResult),
         (list_tags, ListTagsArguments, TagsResult),
         (read_routine, ReadRoutineArguments, RoutineResult),
         (get_capabilities, ToolArguments, Capabilities),

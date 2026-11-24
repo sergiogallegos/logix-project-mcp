@@ -61,6 +61,7 @@ Add a local stdio server in your MCP client. Replace both paths in the `mcpServe
 | --- | --- |
 | `get_capabilities` | Contract version, selected file, and format requirements |
 | `get_project` | Controller metadata and the program and routine tree |
+| `get_inventory` | Controller, task schedules, programs, scoped tags, modules, user-defined types, and Add-On Instruction metadata |
 | `list_tags` | Names, data types, and descriptions for controller tags or a specified program's tags |
 | `read_routine` | Routine logic and comments in L5X XML |
 
