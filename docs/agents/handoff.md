@@ -70,6 +70,12 @@ On Windows 11 build 26200 with Python 3.12.10 x64, Logix Designer 38.02, and Roc
 
 LPM-020 is next in board order.
 
+## 2026-11-24 · LPM-020 · Done · Codex on `main`
+
+Verified the documented [Studio 5000 Custom Tools path handoff](../studio-5000-integration.md) on Windows 11 build 26200, Logix Designer 38.02, Python 3.12.10 x64, and Rockwell Python SDK wheel 2.0.2. Two simultaneous editor windows passed their own absolute `.ACD` paths with spaces as a single argument using `"%project_path%"`. An unsaved description edit retained its path and previous saved snapshot in MCP until Save; the subsequent call reported the new description and source hash. Completing a new project wizard created a readable `.ACD` before the first explicit Save. The Tools command with no open project raised macro error 786-0 before starting the helper.
+
+Reviewed the published file-open SDK API and documented the latest-saved-project workflow and reproduction steps. MCP read the already-open and newly created projects with matching source fingerprints. The temporary Custom Tools configuration was restored to its original SHA-256, and the seed project hash matched its original. LPM-021 is ready and next in board order.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.

@@ -25,4 +25,4 @@ flowchart LR
 - `export.py` stages the copied source and SDK output in a temporary directory under the configured export directory. It checks the artifact before creating the destination atomically with an operation that rejects an existing entry, including one created while the SDK is running.
 - Inspection requires a full project export. The XML parser keeps project text and comments as data and rejects DTD declarations.
 
-Studio 5000 keeps unsaved edits in its editor working copy. A future Tools menu integration can pass the current project path to a local helper. Any workflow that applies changes needs a separate design for revisions, review, and writing to a new project file or importing a change into Studio 5000.
+Studio 5000 keeps unsaved edits in its editor working copy. The verified [Custom Tools integration](studio-5000-integration.md) passes the active editor's saved project path to a local helper. The selection and refresh workflow builds on this path and the existing verified snapshot. Any workflow that applies changes needs a separate design for revisions, review, and writing to a new project file or importing a change into Studio 5000.

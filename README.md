@@ -8,7 +8,7 @@ A local MCP server for saved Rockwell Studio 5000 Logix Designer projects. An ag
 | `.L5K` | Imports a temporary copy with the same SDK and inspects its `.L5X` export |
 | `.L5X` | Parses a temporary copy of a full project export without the Rockwell SDK |
 
-Each inspection tool takes a fresh snapshot of the selected saved file. Its successful structured response includes `source_sha256`, the SHA-256 of the saved bytes used for that read. Use it to match results from the same saved version. If the file changes during copying, retry after the save completes. A Studio 5000 Tools menu entry for sharing the current project path and a reviewed offline editing workflow are planned.
+Each inspection tool takes a fresh snapshot of the selected saved file. Its successful structured response includes `source_sha256`, the SHA-256 of the saved bytes used for that read. Use it to match results from the same saved version. If the file changes during copying, retry after the save completes. The [Studio 5000 integration walkthrough](docs/studio-5000-integration.md) verifies the path handoff for the planned Tools menu entry. A reviewed offline editing workflow is also planned.
 
 See the [compatibility matrix](docs/compatibility.md) for tested formats and revisions, SDK requirements, and instructions to reproduce the checks.
 
