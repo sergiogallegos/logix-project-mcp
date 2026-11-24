@@ -1,30 +1,59 @@
 """Load a saved project into the XML representation used by the MCP tools."""
 
 import asyncio
-import shutil
+import os
+import stat
 import sys
+from collections.abc import Coroutine
+from contextlib import suppress
+from hashlib import sha256
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Any, BinaryIO, NamedTuple
 from xml.etree.ElementTree import Element, ParseError
 
+from anyio import CancelScope
 from defusedxml import ElementTree
 from defusedxml.common import DefusedXmlException
 
 PROJECT_EXTENSIONS = {".acd", ".l5k", ".l5x"}
 SDK_TIMEOUT_SECONDS = 90
+COPY_CHUNK_SIZE = 1024 * 1024
 
 
 class ProjectReadError(Exception):
     """An expected project read failure with a message for the MCP client."""
 
 
-async def read_project(path: Path) -> tuple[Element, Element]:
-    """Return the L5X root and controller from the latest saved project."""
+class ProjectSnapshot(NamedTuple):
+    root: Element
+    controller: Element
+    source_sha256: str
+
+
+class SourceChanged(Exception):
+    """The selected file changed while a snapshot was being copied."""
+
+
+async def read_project(path: Path) -> ProjectSnapshot:
+    """Inspect a verified copy and return the SHA-256 of its source bytes."""
+    native = path.suffix.lower() != ".l5x"
+    if native and sys.platform != "win32":
+        raise ProjectReadError("ACD and L5K inspection requires the Rockwell SDK on Windows.")
+
     try:
-        if path.suffix.lower() == ".l5x":
-            root = parse_l5x(path)
-        else:
-            root = await export_saved_project(path)
+        with TemporaryDirectory(prefix="logix-project-mcp-") as directory:
+            snapshot = Path(directory) / f"source{path.suffix}"
+            fingerprint = await finish_file_operation(asyncio.to_thread(copy_snapshot, path, snapshot))
+            xml = snapshot
+            if native:
+                xml = Path(directory) / "snapshot.L5X"
+                await export_snapshot(snapshot, xml, path.name)
+            root = await finish_file_operation(asyncio.to_thread(parse_l5x, xml))
+    except SourceChanged as exc:
+        raise ProjectReadError(
+            f"{path.name} changed while it was being copied. Retry after the save completes."
+        ) from exc
     except (OSError, ParseError, DefusedXmlException) as exc:
         raise ProjectReadError(f"Could not read {path.name}: {exc}") from exc
 
@@ -33,45 +62,90 @@ async def read_project(path: Path) -> tuple[Element, Element]:
         raise ProjectReadError("Expected a Logix Designer project with a controller.")
     if root.get("TargetType", "Controller") != "Controller":
         raise ProjectReadError("Select a full project export to inspect its controller.")
-    return root, controller
+    return ProjectSnapshot(root, controller, fingerprint)
+
+
+async def finish_file_operation[T](operation: Coroutine[Any, Any, T]) -> T:
+    # The thread may still hold an open file when the caller is cancelled.
+    task = asyncio.create_task(operation)
+    try:
+        return await asyncio.shield(task)
+    except asyncio.CancelledError:
+        with CancelScope(shield=True), suppress(Exception):
+            await task
+        raise
+
+
+def file_version(info: os.stat_result) -> tuple[int, int, int, int]:
+    return info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns
+
+
+def hash_source(source: BinaryIO, size: int, destination: BinaryIO | None = None) -> str:
+    digest = sha256()
+    remaining = size
+    while remaining:
+        chunk = source.read(min(remaining, COPY_CHUNK_SIZE))
+        if not chunk:
+            raise SourceChanged
+        digest.update(chunk)
+        if destination is not None:
+            destination.write(chunk)
+        remaining -= len(chunk)
+    return digest.hexdigest()
+
+
+def copy_snapshot(path: Path, snapshot: Path) -> str:
+    expected = path.lstat()
+    if not stat.S_ISREG(expected.st_mode):
+        raise ProjectReadError(f"{path.name} is no longer a regular saved project file.")
+    version = file_version(expected)
+    with path.open("rb", buffering=0) as source:
+        if file_version(os.fstat(source.fileno())) != version:
+            raise SourceChanged
+        with snapshot.open("xb") as destination:
+            fingerprint = hash_source(source, expected.st_size, destination)
+        source.seek(0)
+        # A Windows writer can change bytes before the last-write time is updated.
+        if hash_source(source, expected.st_size) != fingerprint:
+            raise SourceChanged
+        if file_version(os.fstat(source.fileno())) != version:
+            raise SourceChanged
+    if file_version(path.lstat()) != version:
+        raise SourceChanged
+    return fingerprint
 
 
 def parse_l5x(path: Path) -> Element:
     return ElementTree.parse(path, forbid_dtd=True).getroot()
 
 
-async def export_saved_project(path: Path) -> Element:
-    if sys.platform != "win32":
-        raise ProjectReadError("ACD and L5K inspection requires the Rockwell SDK on Windows.")
-
-    with TemporaryDirectory(prefix="logix-project-mcp-") as directory:
-        snapshot = Path(directory) / f"source{path.suffix}"
-        output = Path(directory) / "snapshot.L5X"
-        shutil.copyfile(path, snapshot)
-
-        process = await asyncio.create_subprocess_exec(
-            sys.executable, "-m", "logix_project_mcp._sdk_worker", str(snapshot), str(output),
-            stdin=asyncio.subprocess.DEVNULL,
-            stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.PIPE,
-        )
+async def export_snapshot(snapshot: Path, output: Path, source_name: str) -> None:
+    with output.with_suffix(".stderr").open("w+b") as stderr:
+        # File-backed diagnostics let process exit be observed independently of pipe EOF.
+        with CancelScope(shield=True):
+            process = await asyncio.create_subprocess_exec(
+                sys.executable, "-m", "logix_project_mcp._sdk_worker", str(snapshot), str(output),
+                stdin=asyncio.subprocess.DEVNULL,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=stderr,
+            )
         try:
-            _, diagnostic = await asyncio.wait_for(process.communicate(), SDK_TIMEOUT_SECONDS)
+            async with asyncio.timeout(SDK_TIMEOUT_SECONDS):
+                await process.wait()
         except TimeoutError as exc:
             raise ProjectReadError(
-                f"Logix Designer SDK did not finish exporting {path.name} "
+                f"Logix Designer SDK did not finish exporting {source_name} "
                 f"within {SDK_TIMEOUT_SECONDS} seconds."
             ) from exc
         finally:
             if process.returncode is None:
-                try:
+                with suppress(ProcessLookupError):
                     process.kill()
-                except ProcessLookupError:
-                    pass
-                await process.wait()
+                with CancelScope(shield=True):
+                    await process.wait()
 
         if process.returncode:
-            detail = diagnostic.decode("utf-8", errors="replace").strip()
-            raise ProjectReadError(f"Logix Designer SDK could not export {path.name}: {detail}")
-
-        return parse_l5x(output)
+            stderr.seek(0)
+            detail = stderr.read(8192).decode("utf-8", errors="replace").strip()
+            detail = detail or f"worker exited with code {process.returncode}"
+            raise ProjectReadError(f"Logix Designer SDK could not export {source_name}: {detail}")

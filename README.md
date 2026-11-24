@@ -6,9 +6,9 @@ A local MCP server for saved Rockwell Studio 5000 Logix Designer projects. The f
 | --- | --- |
 | `.ACD` | Opens a temporary copy with the Rockwell SDK and inspects its `.L5X` export |
 | `.L5K` | Imports a temporary copy with the same SDK and inspects its `.L5X` export |
-| `.L5X` | Parses a full project export directly |
+| `.L5X` | Parses a temporary copy of a full project export without the Rockwell SDK |
 
-The server reads the latest saved file on each tool call. Save in Studio 5000 before asking the agent to inspect changes. A Studio 5000 Tools menu entry for sharing the current project path and a reviewed offline editing workflow are planned.
+The server takes a fresh snapshot of the selected saved file on each tool call. Every successful structured response includes `source_sha256`, the SHA-256 of the saved bytes used for that read. Use it to match results from the same saved version. If the file changes during copying, retry after the save completes. A Studio 5000 Tools menu entry for sharing the current project path and a reviewed offline editing workflow are planned.
 
 ## Requirements
 

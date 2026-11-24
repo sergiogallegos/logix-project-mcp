@@ -20,6 +20,12 @@ Added `logix-project-mcp-doctor` and documented the MCP launch environment. The 
 
 A fresh wheel installation without Rockwell's SDK passed the SDK-free stdio and diagnostic tests, opened a Rockwell `.L5X` sample at revision 17.00, and returned exit code 1 with installation guidance for a native project. `pip check` passed. The full compatibility matrix remains in LPM-003. The next ready task is LPM-002.
 
+## 2026-11-24 · LPM-002 · Done · Codex on `main`
+
+Each tool reads a verified temporary snapshot of the selected project and returns its `source_sha256`. The SDK-free wheel passed the MCP schema and stdio checks, including concurrent reads and recovery after a missing source. Regression tests rejected a same-size rewrite with a restored modification time and verified that cancellation and timeout reap a stand-in SDK process and allow the next read.
+
+On Windows 11 build 26200 with Python 3.12.10 x64 and Rockwell's Python SDK 2.0.2, all eight tests passed against an SDK-created Logix Designer 38.02 `.ACD` and again against its `.L5K` export. Each run read the selected source twice over MCP. Both reads matched the source SHA-256, and the source hash was unchanged after each run. Wheel build and `pip check` passed. An upgraded legacy Rockwell sample returned `SetRSLinxEdition` during both a direct SDK call and an MCP read. LPM-003 is ready to document format and revision compatibility.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.

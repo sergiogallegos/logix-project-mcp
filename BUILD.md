@@ -8,11 +8,11 @@ python -m pip check
 python -m unittest discover -s tests -v
 ```
 
-The default test suite starts a real local MCP process, initializes the session, and calls all three tools with a synthetic project. To build a distributable wheel, run `python -m pip wheel --no-deps --wheel-dir dist .`.
+The default test suite starts a real local MCP process, initializes the session, and calls all three tools with a synthetic project. It also exercises concurrent reads, source changes, cancellation, and timeout recovery with a stand-in SDK subprocess. To build a distributable wheel, run `python -m pip wheel --no-deps --wheel-dir dist .`.
 
 ## Verify Rockwell SDK integration on Windows
 
-Install the native prerequisites from [README.md](README.md#requirements). Point the optional SDK smoke test at a Rockwell sample project or another saved copy you are authorized to inspect. Run once per native format you want to verify. The test sends `get_project` through MCP stdio and computes a source file hash before and after.
+Install the native prerequisites from [README.md](README.md#requirements). Point the optional SDK smoke test at a Rockwell sample project or another saved copy you are authorized to inspect. Run once per native format you want to verify. The test sends `get_project` twice through MCP stdio, checks both returned fingerprints, and compares the source file hash before and after.
 
 ```powershell
 $env:LOGIX_PROJECT_MCP_TEST_PROJECT = 'C:\path\to\Sample.ACD'

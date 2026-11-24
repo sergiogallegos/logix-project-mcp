@@ -10,11 +10,13 @@ flowchart LR
     Snapshot --> SDK[Rockwell SDK worker]
     SDK --> Export[Temporary L5X]
     Export --> Reader
-    L5X[Full L5X export] --> Reader
+    L5X[Full L5X export] --> Copy[Temporary L5X copy]
+    Copy --> Reader
 ```
 
-- `server.py` defines the MCP tool contracts and serializes reads for the selected project. Each call reads the current saved version.
-- `project.py` parses the common L5X representation. Native reads use a temporary copy and an SDK subprocess. The subprocess isolates Rockwell runtime initialization and output from MCP stdio. Its execution is bounded so a stalled conversion can return a tool error.
+- `server.py` defines the MCP tool contracts and serializes reads for the selected project. Each successful response includes the source snapshot's SHA-256.
+- `project.py` copies the selected source into a per-read temporary directory and checks the file identity, size, modification time, and copied bytes before using the snapshot. Each request starts from the saved file at the selected path.
+- Native reads use an SDK subprocess to convert the snapshot to L5X. It keeps Rockwell runtime output off MCP stdio. Cancellation and the export timeout stop and reap the worker before the temporary directory is removed and the next read begins.
 - `_sdk_worker.py` calls Rockwell's Python SDK from Windows to open the snapshot and save a detailed L5X export. The SDK installation and activation belong to the host machine.
 - The parser requires a full project export. It keeps project text and comments as data and rejects DTD declarations.
 
