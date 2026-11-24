@@ -37,6 +37,71 @@ class StdioTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(details["code"], code)
         self.assertEqual(result.content[0].text, details["message"])
 
+    async def test_export_creates_only_new_files_in_selected_directory(self):
+        with TemporaryDirectory() as directory:
+            home = Path(directory).resolve()
+            project = home / "Sample.L5X"
+            project.write_bytes(PROJECT)
+            exports = home / "Reviewed exports"
+            exports.mkdir()
+            existing = exports / "Existing.L5X"
+            existing.write_bytes(b"existing")
+            unrelated = exports / "notes.txt"
+            unrelated.write_bytes(b"notes")
+            server = StdioServerParameters(
+                command=sys.executable,
+                args=["-m", "logix_project_mcp.server", "--project", str(project), "--export-dir", str(exports)],
+            )
+
+            async with stdio_client(server) as (reader, writer), ClientSession(reader, writer) as client:
+                await client.initialize()
+                tool = next(tool for tool in (await client.list_tools()).tools if tool.name == "export_project")
+                self.assertFalse(tool.annotations.readOnlyHint)
+                self.assertFalse(tool.annotations.destructiveHint)
+                caps = await client.call_tool("get_capabilities")
+                self.assertFalse(caps.structuredContent["read_only"])
+                error_schema = tool.meta["logix-project-mcp/error-schema"]
+
+                request = {"filename": "Project copy.L5X"}
+                validate(request, tool.inputSchema)
+                result = await client.call_tool(tool.name, request)
+                self.assertFalse(result.isError, result.content)
+                validate(result.structuredContent, tool.outputSchema)
+                output = exports / request["filename"]
+                self.assertEqual(result.structuredContent, {
+                    "path": str(output), "format": "l5x", "component": None,
+                    "source_sha256": hashlib.sha256(PROJECT).hexdigest(),
+                })
+                self.assertEqual(output.read_bytes(), PROJECT)
+
+                for filename in ("../Elsewhere.L5X", r"C:\Elsewhere.L5X", "file:stream.L5X", "NUL.L5X", "project.ACD"):
+                    with self.subTest(filename=filename):
+                        error = await client.call_tool(tool.name, {"filename": filename})
+                        self.assert_tool_error(error, "invalid_arguments", error_schema)
+                routine = {"kind": "routine", "program": "MainProgram", "name": "MainRoutine"}
+                error = await client.call_tool(tool.name, {"filename": "Wrong.L5K", "component": routine})
+                self.assert_tool_error(error, "invalid_arguments", error_schema)
+                error = await client.call_tool(tool.name, {
+                    "filename": "Wrong.L5X",
+                    "component": {"kind": "rungs", "program": "MainProgram", "routine": "MainRoutine", "first": 2, "last": 1},
+                })
+                self.assert_tool_error(error, "invalid_arguments", error_schema)
+                for filename in (existing.name, output.name):
+                    error = await client.call_tool(tool.name, {"filename": filename})
+                    self.assert_tool_error(error, "destination_exists", error_schema)
+
+                self.assertEqual(project.read_bytes(), PROJECT)
+                invalid = b'<RSLogix5000Content TargetType="Routine"><Controller /></RSLogix5000Content>'
+                project.write_bytes(invalid)
+                error = await client.call_tool(tool.name, {"filename": "Invalid.L5X"})
+                self.assert_tool_error(error, "invalid_project", error_schema)
+                self.assertEqual(project.read_bytes(), invalid)
+            self.assertEqual(existing.read_bytes(), b"existing")
+            self.assertEqual(unrelated.read_bytes(), b"notes")
+            self.assertEqual(output.read_bytes(), PROJECT)
+            self.assertEqual(set(exports.iterdir()), {existing, unrelated, output})
+            self.assertFalse((home / "Elsewhere.L5X").exists())
+
     async def test_inspect_selected_project_without_modifying_it(self):
         with TemporaryDirectory() as directory:
             project = Path(directory) / "Sample.L5X"

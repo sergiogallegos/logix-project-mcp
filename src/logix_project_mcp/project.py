@@ -23,12 +23,12 @@ COPY_CHUNK_SIZE = 1024 * 1024
 
 ProjectErrorCode = Literal[
     "project_unavailable", "project_changed", "invalid_project", "unsupported_platform",
-    "sdk_timeout", "sdk_error", "not_found",
+    "sdk_timeout", "sdk_error", "not_found", "destination_exists", "export_failed",
 ]
 
 
 class ProjectReadError(Exception):
-    """An expected project read failure with a message for the MCP client."""
+    """An expected saved-project failure with a message for the MCP client."""
 
     def __init__(self, code: ProjectErrorCode, message: str) -> None:
         super().__init__(message)
@@ -54,12 +54,32 @@ async def read_project(path: Path) -> ProjectSnapshot:
     try:
         with TemporaryDirectory(prefix="logix-project-mcp-") as directory:
             snapshot = Path(directory) / f"source{path.suffix}"
-            fingerprint = await finish_file_operation(asyncio.to_thread(copy_snapshot, path, snapshot))
+            fingerprint = await snapshot_source(path, snapshot)
             xml = snapshot
             if native:
                 xml = Path(directory) / "snapshot.L5X"
                 await export_snapshot(snapshot, xml, path.name)
             root = await finish_file_operation(asyncio.to_thread(parse_l5x, xml))
+    except OSError as exc:
+        raise ProjectReadError("project_unavailable", f"Could not read {path.name}: {exc}") from exc
+    except (ParseError, DefusedXmlException) as exc:
+        raise ProjectReadError("invalid_project", f"Could not read {path.name}: {exc}") from exc
+
+    return ProjectSnapshot(root, controller_from_l5x(root), fingerprint)
+
+
+def controller_from_l5x(root: Element) -> Element:
+    controller = root.find("Controller")
+    if root.tag != "RSLogix5000Content" or controller is None:
+        raise ProjectReadError("invalid_project", "Expected a Logix Designer project with a controller.")
+    if root.get("TargetType", "Controller") != "Controller":
+        raise ProjectReadError("invalid_project", "Select a full project export to inspect its controller.")
+    return controller
+
+
+async def snapshot_source(path: Path, snapshot: Path) -> str:
+    try:
+        return await finish_file_operation(asyncio.to_thread(copy_snapshot, path, snapshot))
     except SourceChanged as exc:
         raise ProjectReadError(
             "project_changed",
@@ -67,15 +87,6 @@ async def read_project(path: Path) -> ProjectSnapshot:
         ) from exc
     except OSError as exc:
         raise ProjectReadError("project_unavailable", f"Could not read {path.name}: {exc}") from exc
-    except (ParseError, DefusedXmlException) as exc:
-        raise ProjectReadError("invalid_project", f"Could not read {path.name}: {exc}") from exc
-
-    controller = root.find("Controller")
-    if root.tag != "RSLogix5000Content" or controller is None:
-        raise ProjectReadError("invalid_project", "Expected a Logix Designer project with a controller.")
-    if root.get("TargetType", "Controller") != "Controller":
-        raise ProjectReadError("invalid_project", "Select a full project export to inspect its controller.")
-    return ProjectSnapshot(root, controller, fingerprint)
 
 
 async def finish_file_operation[T](operation: Coroutine[Any, Any, T]) -> T:
@@ -132,12 +143,13 @@ def parse_l5x(path: Path) -> Element:
     return ElementTree.parse(path, forbid_dtd=True).getroot()
 
 
-async def export_snapshot(snapshot: Path, output: Path, source_name: str) -> None:
+async def export_snapshot(snapshot: Path, output: Path, source_name: str, component_xpath: str | None = None) -> None:
+    selector = (component_xpath,) if component_xpath is not None else ()
     with output.with_suffix(".stderr").open("w+b") as stderr:
         # File-backed diagnostics let process exit be observed independently of pipe EOF.
         with CancelScope(shield=True):
             process = await asyncio.create_subprocess_exec(
-                sys.executable, "-m", "logix_project_mcp._sdk_worker", str(snapshot), str(output),
+                sys.executable, "-m", "logix_project_mcp._sdk_worker", str(snapshot), str(output), *selector,
                 stdin=asyncio.subprocess.DEVNULL,
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=stderr,

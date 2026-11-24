@@ -14,8 +14,9 @@ Call `tools/list` to discover the JSON Schema for each tool's arguments and succ
 | `search_project` | Required `query`. Optional `kind`, `program`, and [paging arguments](#scoped-search-and-cross-references). | Saved source identity, `matches`, and `next_offset` |
 | `find_references` | Required `name`. Optional `kind`, `program`, and [paging arguments](#scoped-search-and-cross-references). | Saved source identity, `matches`, and `next_offset` |
 | `compare_projects` | Optional `scope` when a candidate was [selected at launch](#project-comparison) | `before`, `after`, scoped `changes`, and `protected_components` |
+| `export_project` | Required `filename` and optional `component` when an [export directory](#offline-export) was selected at launch | `path`, `format`, `component`, and `source_sha256` |
 
-Names match without regard to case. The server rejects arguments outside the tool's schema. The server selects the project through `--project` at launch. Restart it to select another file.
+Inspection matches names without regard to case. The server rejects arguments outside the tool's schema. The server selects the project through `--project` at launch. Restart it to select another file.
 
 `file` is the selected file's basename. `format` is one of `acd`, `l5k`, or `l5x`. `software_revision` comes from the L5X `SoftwareRevision` attribute and may be `null`. `source_sha256` is the lowercase SHA-256 digest of the saved file snapshot. Compare hashes to determine whether reads used the same saved bytes.
 
@@ -90,9 +91,31 @@ Components match by kind and case-insensitive qualified name. The controller is 
 
 Comparison normalizes XML indentation and attribute order and ignores export headers, common author and timestamp attributes, and `Use` context markers. Decorated tag values take precedence when an export also includes a redundant raw or L5K value. Saved settings such as the controller serial number, tag values, and schedule or rung order are compared. Protected components are listed in `protected_components` and compared using available metadata. [Rockwell Logix 5000 Import/Export reference](https://literature.rockwellautomation.com/idc/groups/literature/documents/rm/1756-rm014_-en-p.pdf)
 
+## Offline export
+
+Add `--export-dir` and an existing directory to the launch arguments to enable `export_project`. The export always uses the saved file selected by `--project`. Supply a filename without directory segments. The server publishes the finished artifact only when there is no existing entry at the destination. It returns the absolute artifact `path`, lowercase `format`, requested `component` or `null`, and the source snapshot's SHA-256.
+
+For a full export, omit `component` or pass `null`. Choose either `.L5X` or `.L5K`. Full `.L5X` input exported to `.L5X` is copied byte for byte. Other combinations require Windows and an SDK-compatible project revision. For component export, choose `.L5X` and use the names recorded in the saved project. [Rockwell SDK Getting Results Guide](https://literature.rockwellautomation.com/idc/groups/literature/documents/gr/ldsdk-gr001_-en-p.pdf)
+
+| `component.kind` | Other `component` fields |
+| --- | --- |
+| `program` | `name` of the program or equipment phase |
+| `routine` | `program` and routine `name` |
+| `data_type` | `name` of the user-defined data type |
+| `add_on_instruction` | `name` of the Add-On Instruction |
+| `rungs` | `program`, `routine`, and inclusive, zero-based `first` and `last` rung numbers |
+
+Example component request.
+
+```json
+{"filename":"MainRoutine.L5X","component":{"kind":"routine","program":"MainProgram","name":"MainRoutine"}}
+```
+
+Rockwell's component exporter includes referenced project elements as context. Rockwell documents that exported safety components may omit safety signatures. [Rockwell SDK Getting Results Guide](https://literature.rockwellautomation.com/idc/groups/literature/documents/gr/ldsdk-gr001_-en-p.pdf)
+
 ## Capability reporting
 
-`get_capabilities` returns `schema_version` as `1` and `read_only` as `true`. Its `project` object contains `file` and `format`. Each `formats` entry contains `format`, `requires_windows`, and `requires_rockwell_sdk`. `platform` is the Python platform identifier such as `win32` or `linux`.
+`get_capabilities` returns `schema_version` as `1`. `read_only` is `true` by default and `false` when `--export-dir` enables file creation. Its `project` object contains `file` and `format`. Each `formats` entry describes inspection and contains `format`, `requires_windows`, and `requires_rockwell_sdk`. `platform` is the Python platform identifier such as `win32` or `linux`.
 
 `rockwell_sdk_module_found` reports whether the server's Python environment can locate the vendor module. Use the [launch diagnostics](../README.md#check-the-installation) to test the SDK service, installed Logix Designer revision, runtime, and project read. `get_capabilities` can report the selection and requirements while the save file is unavailable.
 
@@ -121,8 +144,10 @@ Expected failures return `isError: true` and a human-readable `content` block. C
 | `project_unavailable` | The source or a working file could not be read or copied. |
 | `project_changed` | The source changed during copying. Retry after the save completes. |
 | `invalid_project` | The XML is invalid, rejected by the parser, or missing the required full project structure. |
-| `unsupported_platform` | A native project read requires Windows. |
+| `unsupported_platform` | The operation requires the Rockwell SDK on Windows. |
 | `sdk_timeout` | The SDK worker exceeded its export time limit. |
 | `sdk_error` | The SDK worker reported a failure. The message contains its diagnostic. |
+| `destination_exists` | The export destination is already occupied. |
+| `export_failed` | An output file could not be created, validated, or published. |
 
 Use `code` for programmatic handling and display `message` to the user. MCP handles malformed protocol messages and cancellation replies separately.

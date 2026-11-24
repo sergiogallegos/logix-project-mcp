@@ -62,6 +62,14 @@ Added [`compare_projects`](../mcp-contract.md#project-comparison) for a baseline
 
 The SDK-free wheel passed the test suite and `pip check`. A one-line edit in a copy of an SDK-generated `.L5X` produced one routine change. The revision 38.02 `.ACD`/`.L5K` and `.L5K`/`.L5X` comparisons of the same fixture reported zero changes. Native checks used Windows 11 build 26200, Python 3.12.10 x64, and Rockwell Python wheel 2.0.2. All compared source hashes stayed unchanged. LPM-030 is now ready. LPM-015 is next in board order.
 
+## 2026-11-24 · LPM-015 · Done · Codex on `main`
+
+Added [`export_project`](../mcp-contract.md#offline-export) for full `.L5X` and `.L5K` and component `.L5X`. The local user enables export with `--export-dir` and supplies a new filename for each artifact. The server stages the output from a verified source snapshot and uses an atomic operation that refuses existing destinations.
+
+On Windows 11 build 26200 with Python 3.12.10 x64, Logix Designer 38.02, and Rockwell Python wheel 2.0.2, MCP exported both full formats from `.ACD` and `.L5K`. The SDK reopened all four exports and imported the exported routine into a scratch project. Logix Designer desktop also imported a full `.L5X` to a distinct `.ACD`. MCP component tests covered programs, an equipment phase, a routine, a user-defined data type, an Add-On Instruction, and a ladder rung range. The existing-destination and missing-routine checks preserved the source and neighboring file hashes. The SDK-free wheel passed the test suite and `pip check`, covering byte-for-byte `.L5X` copy and a destination created during export. [Compatibility and reproduction steps](../compatibility.md#verified-exports)
+
+LPM-020 is next in board order.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.

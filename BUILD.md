@@ -8,7 +8,7 @@ python -m pip check
 python -m unittest discover -s tests -v
 ```
 
-The default test suite starts a real local MCP process, initializes the session, and verifies tool schemas, capabilities, reads, and errors with a synthetic project. It also exercises concurrent reads, source changes, cancellation, and timeout recovery with a stand-in SDK subprocess. To build a distributable wheel, run `python -m pip wheel --no-deps --wheel-dir dist .`.
+The default test suite starts a real local MCP process and verifies tool schemas, capabilities, reads, exports, and errors with a synthetic project. It checks that an occupied export destination survives a request, including when the file appears while an export is in progress. It also exercises concurrent reads, source changes, cancellation, and timeout recovery with a stand-in SDK subprocess. To build a distributable wheel, run `python -m pip wheel --no-deps --wheel-dir dist .`.
 
 ## Verify Rockwell SDK integration on Windows
 
@@ -21,3 +21,5 @@ Remove-Item Env:LOGIX_PROJECT_MCP_TEST_PROJECT
 ```
 
 The test inherits the launching PowerShell environment. Use [the diagnostic command](README.md#check-the-installation) to compare that setup with the reduced MCP client environment. Report the project revision, SDK wheel version, and the formats exercised. An SDK export run directly in Python checks a different entry point from the MCP smoke test. Record both outcomes when diagnosing a native failure.
+
+Follow the [offline export checks](docs/compatibility.md#verify-offline-export) to verify native format conversion and component import.

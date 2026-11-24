@@ -2,7 +2,7 @@
 
 **1.0 outcome.** An engineer can select the project they have open in Studio 5000, share its latest saved `.ACD` with an MCP client, inspect and compare the project, review a proposed offline edit, and reopen a validated `.ACD` copy or import the reviewed `.L5X` component into Studio 5000. The server also supports the documented `.L5K` and `.L5X` workflows.
 
-**Next task.** [LPM-015](tasks.md#lpm-015) covers full and component export. See the [MCP tool contract](../mcp-contract.md#project-comparison) for project comparison.
+**Next task.** [LPM-020](tasks.md#lpm-020) tests how Studio 5000 Custom Tools pass the selected project path. See the [MCP tool contract](../mcp-contract.md#offline-export) for offline exports.
 
 Follow the [agent workflow](README.md) and record acceptance evidence in the [handoff log](handoff.md). Each task links to its deliverable and verification criteria.
 
@@ -18,7 +18,7 @@ Follow the [agent workflow](README.md) and record acceptance evidence in the [ha
 | [LPM-012](tasks.md#lpm-012) | Routine inspection by language | LPM-010 | Done | Codex on `main` |
 | [LPM-013](tasks.md#lpm-013) | Scoped search and cross-references | LPM-011, LPM-012 | Done | Codex on `main` |
 | [LPM-014](tasks.md#lpm-014) | Reviewable project comparison | LPM-002, LPM-011, LPM-012 | Done | Codex on `main` |
-| [LPM-015](tasks.md#lpm-015) | Full and component export | LPM-002, LPM-003 | Ready | — |
+| [LPM-015](tasks.md#lpm-015) | Full and component export | LPM-002, LPM-003 | Done | Codex on `main` |
 | [LPM-020](tasks.md#lpm-020) | Studio 5000 integration feasibility | — | Ready | — |
 | [LPM-021](tasks.md#lpm-021) | Share and refresh a selected project | LPM-002, LPM-020 | Planned | — |
 | [LPM-022](tasks.md#lpm-022) | Installable Studio 5000 Tools menu entry | LPM-021 | Planned | — |

@@ -13,9 +13,10 @@ from xml.etree.ElementTree import Element, tostring
 from mcp.server.lowlevel import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import CallToolResult, TextContent, Tool, ToolAnnotations
-from pydantic import ConfigDict, Field, TypeAdapter, ValidationError
+from pydantic import AfterValidator, ConfigDict, Field, TypeAdapter, ValidationError
 
 from .comparison import ComparisonReport, compare
+from .export import ExportComponent, ExportedFile, export_saved_project, validate_filename
 from .inventory import (
     ProjectInventory,
     RoutineSummary,
@@ -37,6 +38,7 @@ from .routines import RoutineInspection, inspect_routine
 from .search import ProjectSearch, SearchKind, SearchMatch, SymbolKind, page
 
 READ_ONLY = ToolAnnotations(readOnlyHint=True, idempotentHint=True, openWorldHint=False)
+EXPORT_WRITE = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False)
 ERROR_KEY = "logix-project-mcp/error"
 ERROR_SCHEMA_KEY = "logix-project-mcp/error-schema"
 ToolErrorCode = ProjectErrorCode | Literal["invalid_arguments", "unknown_tool"]
@@ -91,6 +93,14 @@ class CompareArguments(ToolArguments, total=False):
     scope: ComparisonScope | None
 
 
+class ExportArguments(ToolArguments):
+    filename: Annotated[
+        str, Field(pattern=r'^[^<>:"/\\|?*\x00-\x1f]+[.][lL]5[xXkK]$', max_length=255),
+        AfterValidator(validate_filename),
+    ]
+    component: NotRequired[ExportComponent | None]
+
+
 class ToolErrorDetails(TypedDict):
     code: ToolErrorCode
     message: str
@@ -111,7 +121,7 @@ class Capabilities(TypedDict):
     schema_version: Literal[1]
     project: ProjectIdentity
     formats: list[FormatCapability]
-    read_only: Literal[True]
+    read_only: bool
     platform: str
     rockwell_sdk_module_found: bool
     comparison_project: NotRequired[ProjectIdentity]
@@ -162,7 +172,7 @@ class ComparisonResult(ComparisonReport):
     after: ComparisonSource
 
 
-def create_server(path: Path, compare_path: Path | None = None) -> Server:
+def create_server(path: Path, compare_path: Path | None = None, export_dir: Path | None = None) -> Server:
     server = Server(
         "logix-project-mcp",
         instructions="Inspect the saved Studio 5000 project selected at server startup.",
@@ -187,7 +197,7 @@ def create_server(path: Path, compare_path: Path | None = None) -> Server:
                 }
                 for format_name in get_args(ProjectFormat)
             ],
-            "read_only": True,
+            "read_only": export_dir is None,
             "platform": sys.platform,
             "rockwell_sdk_module_found": find_spec("logix_designer_sdk") is not None,
         }
@@ -303,6 +313,17 @@ def create_server(path: Path, compare_path: Path | None = None) -> Server:
         report = await asyncio.to_thread(compare, baseline.controller, candidate.controller, kind, program)
         return {"before": comparison_source(path, baseline), "after": comparison_source(compare_path, candidate), **report}
 
+    async def export_project(filename: str, component: ExportComponent | None = None) -> ExportedFile | CallToolResult:
+        """Export the selected saved project or a component to a new file in the configured export directory."""
+        assert export_dir is not None
+        if component is not None:
+            if Path(filename).suffix.lower() != ".l5x":
+                return tool_error("invalid_arguments", "Choose an .L5X filename for a component export.")
+            if component["kind"] == "rungs" and component["last"] < component["first"]:
+                return tool_error("invalid_arguments", "The first rung number must be at most the last rung number.")
+        async with project_read_lock:
+            return await export_saved_project(path, export_dir, filename, component)
+
     error_schema = TypeAdapter(ToolErrorDetails).json_schema()
     tools = {}
     registrations = (
@@ -316,6 +337,8 @@ def create_server(path: Path, compare_path: Path | None = None) -> Server:
     )
     if compare_path is not None:
         registrations += ((compare_projects, CompareArguments, ComparisonResult),)
+    if export_dir is not None:
+        registrations += ((export_project, ExportArguments, ExportedFile),)
     for handler, request_type, result_type in registrations:
         arguments = TypeAdapter(request_type)
         tool = Tool(
@@ -323,7 +346,7 @@ def create_server(path: Path, compare_path: Path | None = None) -> Server:
             description=handler.__doc__,
             inputSchema=arguments.json_schema(),
             outputSchema=TypeAdapter(result_type).json_schema(),
-            annotations=READ_ONLY,
+            annotations=EXPORT_WRITE if handler is export_project else READ_ONLY,
             _meta={ERROR_SCHEMA_KEY: error_schema},
         )
         tools[tool.name] = tool, arguments, handler
@@ -376,8 +399,8 @@ def comparison_source(path: Path, snapshot: ProjectSnapshot) -> ComparisonSource
     }
 
 
-async def run_stdio(path: Path, compare_path: Path | None = None) -> None:
-    server = create_server(path, compare_path)
+async def run_stdio(path: Path, compare_path: Path | None = None, export_dir: Path | None = None) -> None:
+    server = create_server(path, compare_path, export_dir)
     async with stdio_server() as (reader, writer):
         await server.run(reader, writer, server.create_initialization_options())
 
@@ -393,10 +416,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Inspect a saved Studio 5000 project over MCP.")
     parser.add_argument("--project", required=True, type=Path, help="Path to an ACD, L5K, or full L5X project")
     parser.add_argument("--compare-project", type=Path, help="Candidate saved project for offline comparison")
+    parser.add_argument("--export-dir", type=Path, help="Existing directory where the server may create offline exports")
     args = parser.parse_args()
     path = selected_project(parser, "--project", args.project)
     compare_path = selected_project(parser, "--compare-project", args.compare_project) if args.compare_project else None
-    asyncio.run(run_stdio(path, compare_path))
+    export_dir = args.export_dir.resolve() if args.export_dir is not None else None
+    if export_dir is not None and not export_dir.is_dir():
+        parser.error("--export-dir must point to an existing directory")
+    asyncio.run(run_stdio(path, compare_path, export_dir))
 
 
 if __name__ == "__main__":

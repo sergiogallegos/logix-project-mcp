@@ -1,6 +1,6 @@
 # Format and revision compatibility
 
-This matrix covers offline inspection through MCP stdio. Save changes in Studio 5000 before inspecting a project. The [product task board](agents/board.md) tracks the Studio 5000 Tools menu and offline editing workflows.
+This matrix covers offline inspection and export through MCP stdio. Save changes in Studio 5000 before inspecting or exporting a project. The [product task board](agents/board.md) tracks the Studio 5000 Tools menu and offline editing workflows.
 
 ## Verified reads
 
@@ -16,6 +16,12 @@ The local test host ran Windows 11 x64 build 26200 and Python 3.12.10 x64. Nativ
 Each successful read returned `source_sha256` matching the selected file's hash. The selected files kept their original hashes after the checks. `get_project` returned the software revisions shown here in `software_revision`.
 
 Earlier Windows smoke tests also passed `get_project` on a 35.00 `.ACD` and its `.L5K` counterpart with Python wheel 2.0.2. GitHub CI checks SDK-free synthetic `.L5X` reads on Windows and Ubuntu with Python 3.12 and 3.13. [Earlier Windows smoke tests](agents/handoff.md) · [CI test matrix](../.github/workflows/ci.yml)
+
+## Verified exports
+
+On the same Windows and SDK versions, revision 38.02 `.ACD` and `.L5K` inputs each produced full `.L5X` and `.L5K` files through `export_project`. The Logix Designer SDK reopened all four artifacts and recovered the saved controller and Structured Text routine. Component exports exercised a program, an equipment phase, a routine, a user-defined data type, an Add-On Instruction, and a two-rung ladder selection. The SDK imported the exported routine into a separate project copy and reported zero errors or warnings. An occupied destination and a missing routine returned tool errors. The source, existing destination, and unrelated file retained their SHA-256 hashes. The SDK-free wheel also passed a byte-for-byte copy of a full `.L5X`.
+
+Logix Designer desktop imported the full `.L5X` exported from `.ACD` and created a separate `.ACD` from it.
 
 ## Failure cases
 
@@ -67,7 +73,7 @@ On a standard Studio 5000 installation with the matching sample packs, the Rockw
 
 Run the [native MCP smoke test](../BUILD.md#verify-rockwell-sdk-integration-on-windows) once with `Synthetic38.ACD` and once with `Synthetic38.L5K`. It checks two `get_project` calls and the source hash. Use the diagnostic command with `--project` to display the revision for each selected file. [Launch diagnostics](../README.md#check-the-installation)
 
-### Verify full exports and expected failures
+### Verify SDK-free reads and expected failures
 
 Create a second Python environment with just the MCP package.
 
@@ -81,3 +87,9 @@ $sdkFreePython = (Resolve-Path '.local/compatibility-sdk-free/Scripts/python.exe
 - Start an [MCP client](../README.md#connect-an-agent) with `$sdkFreePython` for each full `.L5X`. Call `get_project` and controller-scope `list_tags` on both. Use `DayOfWeek.L5X` to call `list_tags` with a program name and `read_routine` with a program and routine from `get_project`. Compare each `source_sha256` with `Get-FileHash -Algorithm SHA256` for that file.
 - Use the same SDK-free client with `Synthetic38.ACD` and call `get_project` to check the missing-wheel error. The diagnostic command above should also fail with wheel installation guidance.
 - Use the SDK-enabled Python executable with the v26 `DayOfWeek.ACD` and call `get_project` to observe the tool error on an unsupported native revision. Compare `Get-FileHash -Algorithm SHA256` before and after each failure case.
+
+### Verify offline export
+
+Launch the SDK-enabled MCP with a synthetic revision-matched `.ACD` or `.L5K` and add `--export-dir` with an existing scratch directory. Use `get_project` to choose a routine from the sample. Call `export_project` for a full `.L5X`, a full `.L5K`, and a routine `.L5X`, using a new filename each time. Compare each returned `source_sha256` with `Get-FileHash -Algorithm SHA256` for the selected file. Retry with an existing destination and a missing routine, then recheck the selected file, the existing output, and a neighboring file. [Export arguments](mcp-contract.md#offline-export)
+
+In Logix Designer, choose **File > Open** to import a full `.L5X` or `.L5K` and enter a new `.ACD` path when prompted. For a routine export, open a scratch project, select the destination program, and choose the routine option under **File > Import Component**. [Rockwell full-project import](https://www.rockwellautomation.com/en-gb/docs/studio-5000-logix-designer/38-02/contents-ditamap/studio-5000-logix-designer/import-and-export/import-export-a-full-project.html) · [Rockwell component import](https://www.rockwellautomation.com/en-us/docs/studio-5000-logix-designer/38-01/contents-ditamap/studio-5000-logix-designer/import-and-export.html)

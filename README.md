@@ -1,6 +1,6 @@
 # logix-project-mcp
 
-A local MCP server for saved Rockwell Studio 5000 Logix Designer projects. The first version gives an agent read-only access to the controller metadata, tags, and routines in a project you select.
+A local MCP server for saved Rockwell Studio 5000 Logix Designer projects. An agent can inspect controller metadata, tags, and routines, compare saved projects, and create offline exports when you enable export.
 
 | Format | How the server reads it |
 | --- | --- |
@@ -16,7 +16,7 @@ See the [compatibility matrix](docs/compatibility.md) for tested formats and rev
 
 For a full `.L5X` export, install **Python 3.12 or later** with `pip` and `venv`, and use an MCP client that can launch a local stdio server. The Python MCP SDK and XML parser install with the server.
 
-For native `.ACD` and `.L5K` files using the Rockwell SDK 2.02.00 setup shown here, also install:
+For native project reads, format conversions, and component exports with the Rockwell SDK 2.02.00, also install:
 
 - **Windows** and **Studio 5000 Logix Designer** 31 or later, with the version needed to open the selected project.
 - **Logix Designer SDK 2.02.00** and its **Python 2.0.2 wheel**. Rockwell requires a **Professional Edition license or toolkit** to activate this SDK. This wheel supports Python **3.12 and 3.13**.
@@ -67,8 +67,11 @@ Add a local stdio server in your MCP client. Replace both paths in the `mcpServe
 | `search_project` | Scoped declarations, comments, and resolved references matching a query |
 | `find_references` | Locations that refer to a specific declaration, including through alias chains |
 | `compare_projects` | Scoped changes between the baseline and candidate selected at launch |
+| `export_project` | A new full `.L5X` or `.L5K` file, or a component `.L5X`, in your chosen directory |
 
 To enable comparison, keep `--project` set to the baseline and add `--compare-project` followed by the candidate path in the MCP configuration's `args` array.
+
+To enable export, add `--export-dir` followed by an existing directory you choose. Ask the agent for a new filename in that directory, such as `Review.L5X`. The tool reads a snapshot of `--project` and preserves existing files. Copying a full `.L5X` to a new `.L5X` keeps its exact bytes and works without the SDK. Converting formats and exporting components use the Rockwell SDK on Windows.
 
 See the [MCP tool contract](docs/mcp-contract.md) for arguments, structured results, and error codes.
 
