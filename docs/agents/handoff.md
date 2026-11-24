@@ -26,6 +26,12 @@ Each tool reads a verified temporary snapshot of the selected project and return
 
 On Windows 11 build 26200 with Python 3.12.10 x64 and Rockwell's Python SDK 2.0.2, all eight tests passed against an SDK-created Logix Designer 38.02 `.ACD` and again against its `.L5K` export. Each run read the selected source twice over MCP. Both reads matched the source SHA-256, and the source hash was unchanged after each run. Wheel build and `pip check` passed. An upgraded legacy Rockwell sample returned `SetRSLinxEdition` during both a direct SDK call and an MCP read. LPM-003 is ready to document format and revision compatibility.
 
+## 2026-11-24 · LPM-003 · Done · Codex on `main`
+
+Published the [compatibility matrix](../compatibility.md) with the tested versions, operations, and fixture recipe. MCP stdio reported revision 38.02 for the paired synthetic `.ACD` and `.L5K` with Rockwell Python wheel 2.0.2. A separate SDK-free Python environment read full `.L5X` exports at 38.02 and 17.00. The 17.00 Rockwell sample exercised controller and program tags and routine XML. Every successful tool response matched its source SHA-256.
+
+The 26.00 Rockwell `.ACD` returned `SetRSLinxEdition` on this host. The missing-wheel case returned installation guidance through MCP, and the diagnostic command exited with code 1. The checks preserved every source hash. The fixture recipe generated all three formats, and the SDK-free suite and `pip check` passed. LPM-015 is now ready. The next task in board order is LPM-010.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.
