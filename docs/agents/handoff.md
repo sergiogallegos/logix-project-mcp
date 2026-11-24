@@ -76,6 +76,12 @@ Verified the documented [Studio 5000 Custom Tools path handoff](../studio-5000-i
 
 Reviewed the published file-open SDK API and documented the latest-saved-project workflow and reproduction steps. MCP read the already-open and newly created projects with matching source fingerprints. The temporary Custom Tools configuration was restored to its original SHA-256, and the seed project hash matched its original. LPM-021 is ready and next in board order.
 
+## 2026-11-24 · LPM-021 · Done · Codex on `main`
+
+Added `logix-project-mcp-share` with a local CLI, Windows file picker and confirmation, and an explicit refresh action. The existing server supports an opt-in `--selection-file` path. The helper validates a saved project before publishing its selection atomically, and each MCP operation captures the selected path and ID. Inspection responses identify the saved revision and source SHA-256. A stale search page can be rejected even when two same-named projects have identical saved bytes. The fixed-path mode remains available. [Sharing and refresh walkthrough](../studio-5000-integration.md#share-and-refresh)
+
+The SDK-free wheel passed the 17-test suite (the optional native test was skipped) and `pip check`. Stdio checks covered two same-named files, spaces, missing and moved files, invalid and stale selections, refresh, comparison, and export. On Windows 11 build 26200, Python 3.12.10 x64, Logix Designer 38.02 and Rockwell wheel 2.0.2, the helper and one connected MCP session switched between two open `.ACD` copies and observed an editor description change after Save and refresh. The source hash matched each inspected saved version. The Windows confirmation dialog and manual file picker published the expected paths. Shared selection also passed a native `.L5K` read and SDK-free full `.L5X` validation. LPM-022 is now ready.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.

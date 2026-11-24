@@ -1,10 +1,12 @@
 # Architecture
 
-The MCP client launches `logix-project-mcp` with a project path chosen by the user. The server resolves and validates the path at startup. Inspection tools use that baseline for the life of the process. The optional `--compare-project` path selects a second saved project for comparison.
+The MCP client launches `logix-project-mcp` with a fixed `--project` path or a shared `--selection-file` path chosen by the user. In shared mode the local helper validates a saved project and atomically publishes its path and selection ID. The server captures that selection once per request. The optional `--compare-project` path selects a second saved project for comparison.
 
 ```mermaid
 flowchart LR
     Client[Agent MCP client] <-->|stdio| Server[Python MCP server]
+    Engineer[Local project helper] --> Selection[Selection file]
+    Selection --> Server
     Server --> Reader[Project reader]
     ACD[Saved ACD or L5K] --> Snapshot[Temporary project copy]
     Snapshot --> SDK[Rockwell SDK worker]
@@ -15,6 +17,7 @@ flowchart LR
 ```
 
 - `server.py` validates tool arguments and serializes reads, comparisons, and exports for the selected project. Each successful inspection response includes the source snapshot's SHA-256. The [MCP tool contract](mcp-contract.md) describes capability discovery and error metadata.
+- `share.py` provides the local command and Windows dialogs. `selection.py` validates and atomically publishes the selected path. In shared mode each successful project response records the selection ID captured for that request.
 - `inventory.py` extracts scoped tag and routine identities and component metadata from the verified L5X snapshot.
 - `routines.py` extracts numbered source text, diagram structure, and protection status from saved routines.
 - `search.py` indexes visible declarations by scope, resolves references from saved routine sections, and produces bounded search pages.

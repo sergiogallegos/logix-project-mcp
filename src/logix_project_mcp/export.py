@@ -21,6 +21,7 @@ from .project import (
     parse_l5x,
     snapshot_source,
 )
+from .selection import SelectionResult
 
 LogixName = Annotated[str, Field(pattern=r"^[A-Za-z_][A-Za-z0-9_]*$", max_length=40)]
 RungNumber = Annotated[int, Field(ge=0, le=2_147_483_647)]
@@ -55,7 +56,7 @@ class RungsComponent(TypedDict):
 ExportComponent = Annotated[NamedComponent | RoutineComponent | RungsComponent, Field(discriminator="kind")]
 
 
-class ExportedFile(TypedDict):
+class ExportedFile(SelectionResult):
     path: str
     format: ExportFormat
     component: ExportComponent | None

@@ -16,11 +16,19 @@ Call `tools/list` to discover the JSON Schema for each tool's arguments and succ
 | `compare_projects` | Optional `scope` when a candidate was [selected at launch](#project-comparison) | `before`, `after`, scoped `changes`, and `protected_components` |
 | `export_project` | Required `filename` and optional `component` when an [export directory](#offline-export) was selected at launch | `path`, `format`, `component`, and `source_sha256` |
 
-Inspection matches names without regard to case. The server rejects arguments outside the tool's schema. The server selects the project through `--project` at launch. Restart it to select another file.
+Inspection matches names without regard to case. The server rejects arguments outside the tool's schema. Select a fixed project through `--project` at launch or enable the [shared selection](#shared-selection) using `--selection-file`.
 
 `file` is the selected file's basename. `format` is one of `acd`, `l5k`, or `l5x`. `software_revision` comes from the L5X `SoftwareRevision` attribute and may be `null`. `source_sha256` is the lowercase SHA-256 digest of the saved file snapshot. Compare hashes to determine whether reads used the same saved bytes.
 
 The original three tool names and their result fields remain available. `get_project` adds `format`. Text content contains the project summary as JSON, one JSON object per listed tag, or the routine XML when available.
+
+## Shared selection
+
+Configure an absolute `--selection-file` JSON path and use the local [sharing helper](studio-5000-integration.md#share-and-refresh) with the same path. Only local selection-file updates change the project selection. A server can initialize before the first share, when capabilities report `project: null` and project reads return `selection_required`.
+
+In shared mode `get_capabilities` includes `selection_mode: "shared"`. Successful project responses include `selection.path` (the absolute saved path) and `selection.selection_id` (a 32-character lowercase hexadecimal identifier). Inspection, search, and comparison also include `selection.controller` and `selection.software_revision` from their actual snapshot. Capabilities and export results provide the path and selection ID. Each successful local share or explicit refresh creates a fresh selection ID. A request uses the selection it captured when starting its read.
+
+Saving an edit updates `source_sha256` on the next inspection while the selection ID stays the same. A moved or deleted saved file returns `project_unavailable` until the engineer shares an existing path. A missing selection file returns `selection_required`, and an invalid one returns `invalid_selection`.
 
 ## Project inventory
 
@@ -79,11 +87,11 @@ Each match reports its `kind`, `location`, a short `excerpt`, and its `symbol` w
 
 Unqualified tag operands resolve to the current program before controller scope. Explicit `Program:<program>.<tag>` operands resolve in that program. Structure and array access resolve to the declared base tag. Array index expressions can also contain tag references. Alias resolution stops at unresolved targets or cycles. Comments and quoted strings are excluded from operand matching. Visible descriptions, rung comments, inline logic comments, and diagram text are searchable as comments. Protected routine headers remain searchable as declarations, while their bodies contribute zero matches. Tag operand matching is lexical and uses exported declarations. Use Studio 5000 for instruction-specific operand validation, indirect target resolution, and read/write analysis. [Rockwell Logix 5000 Import/Export reference](https://literature.rockwellautomation.com/idc/groups/literature/documents/rm/1756-rm014_-en-p.pdf)
 
-Both tools return `file`, `format`, `software_revision`, and `source_sha256` for the saved snapshot. `limit` defaults to 50 and accepts 1–200. `offset` defaults to 0 and accepts up to 2,147,483,647. Keep the query and scope fixed between pages. Send `next_offset` as `offset` and the first page's `source_sha256` as `expected_source_sha256`. A newer save then returns `project_changed`, and a `null` `next_offset` marks the last page.
+Both tools return `file`, `format`, `software_revision`, and `source_sha256` for the saved snapshot. `limit` defaults to 50 and accepts 1–200. `offset` defaults to 0 and accepts up to 2,147,483,647. Keep the query and scope fixed between pages. Send `next_offset` as `offset` and the first page's `source_sha256` as `expected_source_sha256`. In shared mode also pass `selection.selection_id` as `expected_selection_id`. A newer save returns `project_changed`, a changed selection returns `selection_changed`, and a `null` `next_offset` marks the last page.
 
 ## Project comparison
 
-Set `--project` to the baseline and add `--compare-project` with the candidate path in the server's launch arguments. Each can be an `.ACD`, `.L5K`, or full `.L5X`. With two paths configured, `tools/list` includes `compare_projects` and `get_capabilities` reports the `comparison_project` selection. Inspection tools continue to use the baseline.
+Select the baseline using `--project` or the shared selection and add `--compare-project` with the candidate path in the server's launch arguments. Each can be an `.ACD`, `.L5K`, or full `.L5X`. With a candidate configured, `tools/list` includes `compare_projects` and `get_capabilities` reports the `comparison_project` selection. Inspection tools use the baseline.
 
 Call `compare_projects` with `{}` for all supported scopes. Use `{"scope":{"kind":"controller"}}` for controller scope or `{"scope":{"kind":"program","program":"Main"}}` for one program. A program present on either side can be reviewed by name. The response labels the snapshots as `before` and `after`, each with file name, format, controller, software revision, and source SHA-256. The roles and hashes distinguish same-named projects.
 
@@ -93,7 +101,7 @@ Comparison normalizes XML indentation and attribute order and ignores export hea
 
 ## Offline export
 
-Add `--export-dir` and an existing directory to the launch arguments to enable `export_project`. The export always uses the saved file selected by `--project`. Supply a filename without directory segments. The server publishes the finished artifact only when there is no existing entry at the destination. It returns the absolute artifact `path`, lowercase `format`, requested `component` or `null`, and the source snapshot's SHA-256.
+Add `--export-dir` and an existing directory to the launch arguments to enable `export_project`. The export uses the selected saved file. Supply a filename without directory segments. The server publishes the finished artifact only when there is no existing entry at the destination. It returns the absolute artifact `path`, lowercase `format`, requested `component` or `null`, and the source snapshot's SHA-256.
 
 For a full export, omit `component` or pass `null`. Choose either `.L5X` or `.L5K`. Full `.L5X` input exported to `.L5X` is copied byte for byte. Other combinations require Windows and an SDK-compatible project revision. For component export, choose `.L5X` and use the names recorded in the saved project. [Rockwell SDK Getting Results Guide](https://literature.rockwellautomation.com/idc/groups/literature/documents/gr/ldsdk-gr001_-en-p.pdf)
 
@@ -149,5 +157,8 @@ Expected failures return `isError: true` and a human-readable `content` block. C
 | `sdk_error` | The SDK worker reported a failure. The message contains its diagnostic. |
 | `destination_exists` | The export destination is already occupied. |
 | `export_failed` | An output file could not be created, validated, or published. |
+| `selection_required` | Share a saved project using the local helper. |
+| `invalid_selection` | The configured selection file could not be read as a valid selection. |
+| `selection_changed` | The selection ID changed during a search page sequence. |
 
 Use `code` for programmatic handling and display `message` to the user. MCP handles malformed protocol messages and cancellation replies separately.

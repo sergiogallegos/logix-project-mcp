@@ -8,7 +8,7 @@ A local MCP server for saved Rockwell Studio 5000 Logix Designer projects. An ag
 | `.L5K` | Imports a temporary copy with the same SDK and inspects its `.L5X` export |
 | `.L5X` | Parses a temporary copy of a full project export without the Rockwell SDK |
 
-Each inspection tool takes a fresh snapshot of the selected saved file. Its successful structured response includes `source_sha256`, the SHA-256 of the saved bytes used for that read. Use it to match results from the same saved version. If the file changes during copying, retry after the save completes. The [Studio 5000 integration walkthrough](docs/studio-5000-integration.md) verifies the path handoff for the planned Tools menu entry. A reviewed offline editing workflow is also planned.
+Each inspection tool takes a fresh snapshot of the selected saved file. Its successful structured response includes `source_sha256`, the SHA-256 of the saved bytes used for that read. Use it to match results from the same saved version. If the file changes during copying, retry after the save completes. The [Windows sharing helper](docs/studio-5000-integration.md#share-and-refresh) can change the selection in a running MCP session. The Tools menu installer and reviewed offline editing workflow are planned.
 
 See the [compatibility matrix](docs/compatibility.md) for tested formats and revisions, SDK requirements, and instructions to reproduce the checks.
 
@@ -66,12 +66,23 @@ Add a local stdio server in your MCP client. Replace both paths in the `mcpServe
 | `read_routine` | Saved routine source, language-specific sections, and protection status |
 | `search_project` | Scoped declarations, comments, and resolved references matching a query |
 | `find_references` | Locations that refer to a specific declaration, including through alias chains |
-| `compare_projects` | Scoped changes between the baseline and candidate selected at launch |
+| `compare_projects` | Scoped changes between the selected project and configured candidate |
 | `export_project` | A new full `.L5X` or `.L5K` file, or a component `.L5X`, in your chosen directory |
 
-To enable comparison, keep `--project` set to the baseline and add `--compare-project` followed by the candidate path in the MCP configuration's `args` array.
+To enable comparison, add `--compare-project` followed by the candidate path in the MCP configuration's `args` array.
 
-To enable export, add `--export-dir` followed by an existing directory you choose. Ask the agent for a new filename in that directory, such as `Review.L5X`. The tool reads a snapshot of `--project` and preserves existing files. Copying a full `.L5X` to a new `.L5X` keeps its exact bytes and works without the SDK. Converting formats and exporting components use the Rockwell SDK on Windows.
+To enable export, add `--export-dir` followed by an existing directory you choose. Ask the agent for a new filename in that directory, such as `Review.L5X`. The tool reads a snapshot of the selected project and preserves existing files. Copying a full `.L5X` to a new `.L5X` keeps its exact bytes and works without the SDK. Converting formats and exporting components use the Rockwell SDK on Windows.
+
+### Share a project from Windows
+
+To switch projects in an existing MCP connection, replace `--project` and its path with `--selection-file` and an absolute JSON path chosen by you, for example `C:/Users/YourName/AppData/Local/logix-project-mcp/selection.json`. Use the same path when launching the local helper. The helper creates the selection file on the first successful share.
+
+```powershell
+$selection = Join-Path $env:LOCALAPPDATA 'logix-project-mcp\selection.json'
+.\.venv\Scripts\python.exe -m logix_project_mcp.share --selection-file $selection --dialog
+```
+
+Choose a saved project in the file picker. Alternatively, supply a project path as the last argument. After saving in Studio 5000, the server reads the new saved bytes on the next request. Run the helper with `--refresh` to verify and share the previous selection again. [Windows sharing walkthrough](docs/studio-5000-integration.md#share-and-refresh)
 
 See the [MCP tool contract](docs/mcp-contract.md) for arguments, structured results, and error codes.
 

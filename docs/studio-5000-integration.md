@@ -1,6 +1,6 @@
 # Studio 5000 integration
 
-The planned Windows integration uses a Studio 5000 Custom Tools command to hand the selected project path to a local helper. The MCP server reads the latest saved file at that path, using the existing snapshot and SDK worker. The helper and permanent Tools menu installation are tracked by [LPM-021 and LPM-022](agents/board.md).
+The Windows sharing helper accepts a Studio 5000 Custom Tools project-path argument or a manually chosen saved project. The MCP server reads the latest saved file at that path, using the existing snapshot and SDK worker. Permanent Tools menu installation is tracked by [LPM-022](agents/board.md).
 
 ## Supported entry point
 
@@ -47,11 +47,33 @@ Use copies of a matching synthetic project and put spaces in both filenames, for
 6. Close the project and invoke the probe to reproduce error 786-0. Complete **File > New** using a scratch project name and directory, then repeat the probe before using Save. Inspect the created `.ACD` through MCP.
 7. Restore the original configuration from its backup if the probe was the only change. Compare the restored SHA-256 with the backup. If other entries changed during the test, remove the temporary entry through Custom Tools and preserve those changes. Close the sample windows.
 
-## Selection and refresh behavior
+## Share and refresh
 
-- Share the path from the editor window in which the engineer chooses the command. The helper validates the existing `.ACD` file and gives the engineer confirmation of which project was selected.
-- Display the path, controller, software revision, and snapshot fingerprint. The current MCP process accepts one launch-time selection through `--project`; reopen the connection to select a different file until the selection helper is implemented.
-- An engineer saves editor edits before requesting a refresh. Subsequent reads of the same selection take a fresh verified snapshot. If a file is unavailable or changes during copying, display the MCP error and retry after the save completes.
-- If the selected path is missing, empty, or cannot be opened, show a local prompt to save or choose a saved project. When the editor shows error 786-0, open or create a project and invoke the command again. Provide an independent manual `.ACD`, `.L5K`, and full `.L5X` selection route for installations where the menu entry is unavailable.
+Choose a local selection JSON file and configure the MCP client's server arguments with `--selection-file` followed by that absolute path. Start the server with that configuration once. The helper creates the file on its first successful share. The path can be in your own Windows profile, for example the following PowerShell commands from the repository root.
+
+```powershell
+$selection = Join-Path $env:LOCALAPPDATA 'logix-project-mcp\selection.json'
+.\.venv\Scripts\python.exe -m logix_project_mcp.share --selection-file $selection 'C:\Projects\Line One.ACD'
+```
+
+For a graphical file picker, omit the project path and supply `--dialog`. Use `--refresh` to validate and share the previous saved path again. Adding `--dialog` to either a supplied project or a refresh displays the confirmation or the error in a Windows dialog.
+
+```powershell
+.\.venv\Scripts\python.exe -m logix_project_mcp.share --selection-file $selection --dialog
+.\.venv\Scripts\python.exe -m logix_project_mcp.share --selection-file $selection --refresh --dialog
+```
+
+The installed `logix-project-mcp-share` command accepts the same arguments. A Custom Tools entry can invoke the Python environment's `Scripts\pythonw.exe` with arguments `-m logix_project_mcp.share --dialog --selection-file "C:\path\to\selection.json" "%project_path%"`. Use the JSON path configured for your MCP client.
+
+- Share the path from the editor window in which the engineer chooses the command. The helper reads a verified copy of the existing project and confirms the selected path, controller, and software revision. Each successful share creates a new selection ID.
+- MCP responses identify the path, selection ID, and actual inspected revision. The shared server switches to the last successfully shared project on its next request. Moving between editor windows alone leaves the last shared selection in effect.
+- Save editor edits before requesting a refresh. Subsequent reads of the same selection take a fresh verified snapshot. The explicit refresh also changes the selection ID. If a file is unavailable or changes during copying, retry after the save completes or share the new saved path.
+- A failed validation leaves the prior selection in place. When the editor shows error 786-0, open or create a project and invoke the command again. The manual file picker supports `.ACD`, `.L5K`, and full `.L5X` selection. If the selection JSON itself is invalid, choose a fresh JSON path for the client and helper.
 
 Keep the editor session and the SDK worker's temporary project copies within their existing file-based responsibilities. [Architecture](architecture.md)
+
+### Helper verification
+
+On the same Windows and SDK setup used for the desktop walkthrough, the helper switched between two open 38.02 `.ACD` copies while a single MCP session remained connected. An offline controller description edit saved in the second editor became visible after the helper's explicit refresh. The response's source hash changed from `795ee045` to `d4f900f3` and matched the current saved bytes. The first copy retained its original hash. The supplied-project Windows confirmation and the manual L5X picker both published valid selections.
+
+The same helper and MCP selection mode read a 38.02 saved `.L5K` and returned its matching source hash. The SDK-free wheel's sharing command also validated and selected a full `.L5X`.
