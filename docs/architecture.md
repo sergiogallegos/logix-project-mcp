@@ -18,6 +18,7 @@ flowchart LR
 
 - `server.py` validates tool arguments and serializes reads, comparisons, and exports for the selected project. Each successful inspection response includes the source snapshot's SHA-256. The [MCP tool contract](mcp-contract.md) describes capability discovery and error metadata.
 - `share.py` provides the local command and Windows dialogs. `selection.py` validates and atomically publishes the selected path. In shared mode each successful project response records the selection ID captured for that request.
+- `custom_tools.py` installs, updates, and removes the sharing command in Logix Designer's existing menu configuration, with a backup on each actual change.
 - `inventory.py` extracts scoped tag and routine identities and component metadata from the verified L5X snapshot.
 - `routines.py` extracts numbered source text, diagram structure, and protection status from saved routines.
 - `search.py` indexes visible declarations by scope, resolves references from saved routine sections, and produces bounded search pages.

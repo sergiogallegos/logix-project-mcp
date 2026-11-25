@@ -82,6 +82,12 @@ Added `logix-project-mcp-share` with a local CLI, Windows file picker and confir
 
 The SDK-free wheel passed the 17-test suite (the optional native test was skipped) and `pip check`. Stdio checks covered two same-named files, spaces, missing and moved files, invalid and stale selections, refresh, comparison, and export. On Windows 11 build 26200, Python 3.12.10 x64, Logix Designer 38.02 and Rockwell wheel 2.0.2, the helper and one connected MCP session switched between two open `.ACD` copies and observed an editor description change after Save and refresh. The source hash matched each inspected saved version. The Windows confirmation dialog and manual file picker published the expected paths. Shared selection also passed a native `.L5K` read and SDK-free full `.L5X` validation. LPM-022 is now ready.
 
+## 2026-11-24 · LPM-022 · Done · Codex on `main`
+
+Added `logix-project-mcp-menu` with repeatable `install` and `remove` commands for **Send Current Project to Agent**. The entry invokes the installed Python environment's Windows sharing helper with the configured selection JSON and quoted `%project_path%`. The installer preserves existing tools and backs up changed XML. It rejects conflicting names and invalid configurations. The manual path picker remains available. [Installation and removal](../studio-5000-integration.md#install-send-current-project-to-agent)
+
+The SDK-free wheel passed the 20-test suite (the optional native test was skipped) and `pip check`. Its console installer passed repeated install and removal on a disposable XML file. On Windows 11 build 26200 with Python 3.12.10 x64, Logix Designer 38.02, and Rockwell wheel 2.0.2, the actual installed Tools entry shared `Shared project with spaces.ACD` and an already-connected MCP client read revision 38.02 with the matching source hash. Repeated installation and removal preserved the existing entries and ACL. The test deployment was removed and the original XML SHA-256 matched the pretest file. LPM-030 is next in board order.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.

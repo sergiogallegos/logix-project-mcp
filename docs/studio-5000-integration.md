@@ -1,6 +1,6 @@
 # Studio 5000 integration
 
-The Windows sharing helper accepts a Studio 5000 Custom Tools project-path argument or a manually chosen saved project. The MCP server reads the latest saved file at that path, using the existing snapshot and SDK worker. Permanent Tools menu installation is tracked by [LPM-022](agents/board.md).
+The Windows sharing helper accepts a Studio 5000 Custom Tools project-path argument or a manually chosen saved project. The MCP server reads the latest saved file at that path, using the existing snapshot and SDK worker. The menu installer adds the sharing command to an existing Logix Designer installation.
 
 ## Supported entry point
 
@@ -63,7 +63,7 @@ For a graphical file picker, omit the project path and supply `--dialog`. Use `-
 .\.venv\Scripts\python.exe -m logix_project_mcp.share --selection-file $selection --refresh --dialog
 ```
 
-The installed `logix-project-mcp-share` command accepts the same arguments. A Custom Tools entry can invoke the Python environment's `Scripts\pythonw.exe` with arguments `-m logix_project_mcp.share --dialog --selection-file "C:\path\to\selection.json" "%project_path%"`. Use the JSON path configured for your MCP client.
+The installed `logix-project-mcp-share` command accepts the same arguments. The menu installer uses the Python environment's `Scripts\pythonw.exe` with arguments `-m logix_project_mcp.share --dialog --selection-file "C:\path\to\selection.json" "%project_path%"`. Use the JSON path configured for your MCP client.
 
 - Share the path from the editor window in which the engineer chooses the command. The helper reads a verified copy of the existing project and confirms the selected path, controller, and software revision. Each successful share creates a new selection ID.
 - MCP responses identify the path, selection ID, and actual inspected revision. The shared server switches to the last successfully shared project on its next request. Moving between editor windows alone leaves the last shared selection in effect.
@@ -77,3 +77,34 @@ Keep the editor session and the SDK worker's temporary project copies within the
 On the same Windows and SDK setup used for the desktop walkthrough, the helper switched between two open 38.02 `.ACD` copies while a single MCP session remained connected. An offline controller description edit saved in the second editor became visible after the helper's explicit refresh. The response's source hash changed from `795ee045` to `d4f900f3` and matched the current saved bytes. The first copy retained its original hash. The supplied-project Windows confirmation and the manual L5X picker both published valid selections.
 
 The same helper and MCP selection mode read a 38.02 saved `.L5K` and returned its matching source hash. The SDK-free wheel's sharing command also validated and selected a full `.L5X`.
+
+## Install Send Current Project to Agent
+
+Configure the MCP client for shared selection as described above. Note the absolute `--selection-file` path from that configuration. Close the Logix Designer editor windows before changing the shared Custom Tools configuration so that the next launch loads the new entry. Run the following from an administrator PowerShell in the repository, using the actual selection path from your MCP client.
+
+```powershell
+$selection = 'C:\Users\YourName\AppData\Local\logix-project-mcp\selection.json'
+.\.venv\Scripts\python.exe -m logix_project_mcp.custom_tools install --selection-file $selection
+```
+
+The installed `logix-project-mcp-menu` command provides the same `install` and `remove` subcommands. The installer locates `CustomToolsMenu.xml` in the standard Rockwell installation directories. If it cannot identify a single existing configuration, specify the file using `--config` before the subcommand. The XML format follows Rockwell's published Custom Tools configuration. [Rockwell Custom Tools XML help](https://www.rockwellautomation.com/en-us/docs/studio-5000-logix-designer/38-01/contents-ditamap/studio-5000-logix-designer/about-tool-windows/add-a-custom-tool-to-the-tools-menu.html)
+
+Reopen Logix Designer and a saved project. Save any pending edits, then select **Tools > Send Current Project to Agent**. The confirmation window identifies the shared project and revision. Call `get_project` from the connected MCP client to inspect the current selection. Repeat from a different editor window to share that project.
+
+The command updates its own entry when the configured Python environment or selection file changes. Repeating an identical installation leaves the XML bytes intact. Each actual change reports the path to a backup of the previous configuration. Existing menu entries, separators, and comments are retained. An unrelated entry using the same name or an occupied 16-tool menu requires resolving the conflict first.
+
+### Remove the menu entry
+
+Close Logix Designer and run the following from administrator PowerShell.
+
+```powershell
+.\.venv\Scripts\python.exe -m logix_project_mcp.custom_tools remove
+```
+
+Use the same `--config` override if needed. Removal targets the installer-managed entry and reports a backup on a change. A repeated removal reports no change. The saved selection is available to the manual sharing helper, which provides a file picker for any setup where Custom Tools is unavailable.
+
+### Menu verification
+
+On Windows 11 build 26200 with Logix Designer 38.02 and SDK wheel 2.0.2, the installer added **Send Current Project to Agent** alongside the existing entries in the standard Rockwell configuration. Selecting the command in an editor opened on `Shared project with spaces.ACD` launched the sharing helper. An already-connected MCP client received the absolute path and read the controller at revision 38.02 with the matching saved-file SHA-256.
+
+The second install and second removal both reported no change. Existing entries and the configuration ACL matched their originals. After the test, the original XML was restored byte for byte. The SDK-free wheel's console installer also passed repeated install and removal against a disposable configuration.

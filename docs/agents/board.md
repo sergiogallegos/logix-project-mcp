@@ -2,7 +2,7 @@
 
 **1.0 outcome.** An engineer can select the project they have open in Studio 5000, share its latest saved `.ACD` with an MCP client, inspect and compare the project, review a proposed offline edit, and reopen a validated `.ACD` copy or import the reviewed `.L5X` component into Studio 5000. The server also supports the documented `.L5K` and `.L5X` workflows.
 
-**Next task.** [LPM-022](tasks.md#lpm-022) installs the Studio 5000 Tools menu entry for the [Windows sharing helper](../studio-5000-integration.md#share-and-refresh).
+**Next task.** [LPM-030](tasks.md#lpm-030) introduces typed offline change proposals. The [Studio 5000 menu installer](../studio-5000-integration.md#install-send-current-project-to-agent) is verified.
 
 Follow the [agent workflow](README.md) and record acceptance evidence in the [handoff log](handoff.md). Each task links to its deliverable and verification criteria.
 
@@ -21,7 +21,7 @@ Follow the [agent workflow](README.md) and record acceptance evidence in the [ha
 | [LPM-015](tasks.md#lpm-015) | Full and component export | LPM-002, LPM-003 | Done | Codex on `main` |
 | [LPM-020](tasks.md#lpm-020) | Studio 5000 integration feasibility | — | Done | Codex on `main` |
 | [LPM-021](tasks.md#lpm-021) | Share and refresh a selected project | LPM-002, LPM-020 | Done | Codex on `main` |
-| [LPM-022](tasks.md#lpm-022) | Installable Studio 5000 Tools menu entry | LPM-021 | Ready | — |
+| [LPM-022](tasks.md#lpm-022) | Installable Studio 5000 Tools menu entry | LPM-021 | Done | Codex on `main` |
 | [LPM-030](tasks.md#lpm-030) | Typed offline change proposals | LPM-010, LPM-014 | Ready | — |
 | [LPM-031](tasks.md#lpm-031) | Offline tag and metadata edits | LPM-011, LPM-030 | Planned | — |
 | [LPM-032](tasks.md#lpm-032) | Offline ladder and structured text edits | LPM-012, LPM-030 | Planned | — |

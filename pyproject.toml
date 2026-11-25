@@ -16,3 +16,4 @@ dependencies = ["anyio>=4.5,<5", "defusedxml>=0.7.1,<1", "mcp>=1.30,<2", "pydant
 logix-project-mcp = "logix_project_mcp.server:main"
 logix-project-mcp-doctor = "logix_project_mcp.doctor:main"
 logix-project-mcp-share = "logix_project_mcp.share:main"
+logix-project-mcp-menu = "logix_project_mcp.custom_tools:main"

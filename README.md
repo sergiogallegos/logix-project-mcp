@@ -8,7 +8,7 @@ A local MCP server for saved Rockwell Studio 5000 Logix Designer projects. An ag
 | `.L5K` | Imports a temporary copy with the same SDK and inspects its `.L5X` export |
 | `.L5X` | Parses a temporary copy of a full project export without the Rockwell SDK |
 
-Each inspection tool takes a fresh snapshot of the selected saved file. Its successful structured response includes `source_sha256`, the SHA-256 of the saved bytes used for that read. Use it to match results from the same saved version. If the file changes during copying, retry after the save completes. The [Windows sharing helper](docs/studio-5000-integration.md#share-and-refresh) can change the selection in a running MCP session. The Tools menu installer and reviewed offline editing workflow are planned.
+Each inspection tool takes a fresh snapshot of the selected saved file. Its successful structured response includes `source_sha256`, the SHA-256 of the saved bytes used for that read. Use it to match results from the same saved version. If the file changes during copying, retry after the save completes. The [Windows sharing helper](docs/studio-5000-integration.md#share-and-refresh) can change the selection in a running MCP session from the Studio 5000 Tools menu. A reviewed offline editing workflow is planned.
 
 See the [compatibility matrix](docs/compatibility.md) for tested formats and revisions, SDK requirements, and instructions to reproduce the checks.
 
@@ -83,6 +83,12 @@ $selection = Join-Path $env:LOCALAPPDATA 'logix-project-mcp\selection.json'
 ```
 
 Choose a saved project in the file picker. Alternatively, supply a project path as the last argument. After saving in Studio 5000, the server reads the new saved bytes on the next request. Run the helper with `--refresh` to verify and share the previous selection again. [Windows sharing walkthrough](docs/studio-5000-integration.md#share-and-refresh)
+
+Install **Send Current Project to Agent** in Studio 5000 from administrator PowerShell using the same selection-file path. The installer preserves other Custom Tools entries and creates a backup for each change. [Installation and removal](docs/studio-5000-integration.md#install-send-current-project-to-agent)
+
+```powershell
+.\.venv\Scripts\python.exe -m logix_project_mcp.custom_tools install --selection-file $selection
+```
 
 See the [MCP tool contract](docs/mcp-contract.md) for arguments, structured results, and error codes.
 
