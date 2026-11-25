@@ -23,6 +23,18 @@ On the same Windows and SDK versions, revision 38.02 `.ACD` and `.L5K` inputs ea
 
 Logix Designer desktop imported the full `.L5X` exported from `.ACD` and created a separate `.ACD` from it.
 
+## Native snapshot cache measurements
+
+On the Windows 11 build 26200 and SDK wheel 2.0.2 setup above, one MCP session read synthetic revision 38.02 projects through shared selection. The elapsed times include the verified source copy, XML inspection, and MCP response.
+
+| Request | First read | Repeated read |
+| --- | ---: | ---: |
+| `.ACD` `get_project` | 30.431 s | 0.160 s |
+| `.ACD` after replacing the saved bytes with an edited sample | 30.756 s | 0.142 s |
+| `.L5K` `get_project` | 34.907 s | 0.137 s |
+
+`get_inventory` on the first cached `.ACD` took 0.367 s. The edited sample produced the new description and fingerprint, and every response matched the saved source hash. These are measurements of the small synthetic sample, with larger projects covered by the planned performance task. The cached exports are bounded to four entries and 128 MiB combined per server process. Larger individual exports are inspected without caching.
+
 ## Failure cases
 
 | Case | Observed outcome |

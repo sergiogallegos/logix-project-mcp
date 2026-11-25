@@ -88,6 +88,12 @@ Added `logix-project-mcp-menu` with repeatable `install` and `remove` commands f
 
 The SDK-free wheel passed the 20-test suite (the optional native test was skipped) and `pip check`. Its console installer passed repeated install and removal on a disposable XML file. On Windows 11 build 26200 with Python 3.12.10 x64, Logix Designer 38.02, and Rockwell wheel 2.0.2, the actual installed Tools entry shared `Shared project with spaces.ACD` and an already-connected MCP client read revision 38.02 with the matching source hash. Repeated installation and removal preserved the existing entries and ACL. The test deployment was removed and the original XML SHA-256 matched the pretest file. LPM-030 is next in board order.
 
+## 2026-11-24 · LPM-016 · Done · Codex on `main`
+
+Brought native snapshot caching forward following the maintainer's reported 30–40-second inspection latency. Added a session-local cache of validated immutable XML bytes, bounded to four entries and 128 MiB, keyed by selected path and verified SHA-256. Reads retain source consistency checks and parse fresh XML trees. Tests cover invalidation with equal timestamps and sizes, separate paths, missing sources, invalid or failed exports, and eviction. The board also records direct Codex registration (LPM-024) and read-only diagnostics feasibility (LPM-050).
+
+On Windows 11 build 26200 with Python 3.12.10 x64 and SDK wheel 2.0.2, a synthetic revision 38.02 `.ACD` took 30.431 s on the first MCP read and 0.160 s on a repeat. A changed sample required 30.756 s for a fresh export and subsequently 0.142 s. `.L5K` took 34.907 s cold and 0.137 s warm. All fingerprints matched the saved source. The SDK-free wheel passed the 23-test suite with the optional native test skipped, and `pip check` passed. The [compatibility notes](../compatibility.md#native-snapshot-cache-measurements) record the measured scope. LPM-024 is next.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.

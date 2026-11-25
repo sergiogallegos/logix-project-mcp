@@ -50,6 +50,10 @@ Compare two user-selected saved project snapshots by scope, reporting meaningful
 
 Support explicit offline export to a user-selected output path. Cover full `.L5X` and `.L5K` output on supported native revisions and component `.L5X` export where the SDK supports it. Verify an exported project or component can be opened or imported in Logix Designer, and confirm source and unrelated files retain their hashes when an export fails or a destination already exists.
 
+### LPM-016
+
+Reduce repeated native inspection latency, reported at around 30–40 seconds per request by the maintainer. Reuse a bounded, in-memory SDK export cache in each MCP session, keyed by the selected path and verified source SHA-256. Every request retains the source consistency checks. Exercise repeated calls, changed bytes with unchanged timestamps, different selections, missing files, failed exports, and cache eviction. Measure cold and warm MCP calls on a synthetic native sample and retain the broader performance work in LPM-041.
+
 ## Studio 5000 integration
 
 ### LPM-020
@@ -67,6 +71,10 @@ Add **Send Current Project to Agent** to the Studio 5000 Tools menu through docu
 ### LPM-023
 
 Give the engineer a documented way to open the verified `.ACD` copy and to import a reviewed `.L5X` component into the intended offline project. Show paths, source and result identities, and the import target. Verify the workflow in Studio 5000, including a conflicting component name and a project that already has unsaved changes.
+
+### LPM-024
+
+Document and verify direct Codex registration of the local MCP server using a stable selection file shared with the Studio 5000 menu helper. Exercise tool discovery in a new agent session, selection changes, and the native Windows launch environment. Keep the manual sharing route and record the setup without committing user paths or project data.
 
 ## Offline project editing
 
@@ -119,3 +127,9 @@ Finish the quick start, SDK and license prerequisites, supported-format matrix, 
 ### LPM-045
 
 Review the 1.0 release gate, select the release commit, confirm CI and manual Windows evidence, and verify artifacts from that commit. Record the maintainer’s publication approval before tagging and releasing. Confirm the published artifacts install and match the documented revision and features.
+
+## Future diagnostics
+
+### LPM-050
+
+Review documented read-only diagnostics capabilities of the Rockwell SDK and assess whether the maintainer's `rust-ethernet-ip` library would fill a demonstrated gap. Evaluate the proposed user experience with offline or simulated data, including the distinction between saved project information and current observations. Record capability limitations, provenance, and prerequisites for any further work.

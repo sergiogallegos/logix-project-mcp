@@ -10,6 +10,8 @@ A local MCP server for saved Rockwell Studio 5000 Logix Designer projects. An ag
 
 Each inspection tool takes a fresh snapshot of the selected saved file. Its successful structured response includes `source_sha256`, the SHA-256 of the saved bytes used for that read. Use it to match results from the same saved version. If the file changes during copying, retry after the save completes. The [Windows sharing helper](docs/studio-5000-integration.md#share-and-refresh) can change the selection in a running MCP session from the Studio 5000 Tools menu. A reviewed offline editing workflow is planned.
 
+Native inspections reuse a validated SDK export on subsequent calls in the same MCP session when the selected path and source SHA-256 match. A new save with changed bytes triggers a new export. The cache is bounded and held in memory.
+
 See the [compatibility matrix](docs/compatibility.md) for tested formats and revisions, SDK requirements, and instructions to reproduce the checks.
 
 ## Requirements

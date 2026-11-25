@@ -20,6 +20,8 @@ Inspection matches names without regard to case. The server rejects arguments ou
 
 `file` is the selected file's basename. `format` is one of `acd`, `l5k`, or `l5x`. `software_revision` comes from the L5X `SoftwareRevision` attribute and may be `null`. `source_sha256` is the lowercase SHA-256 digest of the saved file snapshot. Compare hashes to determine whether reads used the same saved bytes.
 
+Repeated native inspections can reuse a validated SDK export in the current server process. Each call verifies a fresh source copy and its SHA-256 before any cache lookup. Changed bytes, a different path, unavailable files, and failed reads retain their normal snapshot and error behavior.
+
 The original three tool names and their result fields remain available. `get_project` adds `format`. Text content contains the project summary as JSON, one JSON object per listed tag, or the routine XML when available.
 
 ## Shared selection

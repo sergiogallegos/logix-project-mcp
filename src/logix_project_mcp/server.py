@@ -27,6 +27,7 @@ from .inventory import (
     tag_summary,
 )
 from .project import (
+    NativeSnapshotCache,
     ProjectErrorCode,
     ProjectFormat,
     ProjectReadError,
@@ -183,6 +184,7 @@ def create_server(
         instructions="Inspect the saved Studio 5000 project selected by the local engineer.",
     )
     project_read_lock = asyncio.Lock()
+    native_cache = NativeSnapshotCache()
 
     def selected() -> ProjectSelection:
         if selection_file is not None:
@@ -195,7 +197,7 @@ def create_server(
             selection = selected()
             if expected_selection_id is not None and selection.selection_id != expected_selection_id:
                 raise ProjectReadError("selection_changed", "The shared project selection changed. Start a new search page sequence.")
-            return selection, await read_project(selection.path)
+            return selection, await read_project(selection.path, native_cache)
 
     async def get_capabilities() -> Capabilities:
         """Report the selected file, supported formats, and inspection requirements."""
@@ -337,8 +339,8 @@ def create_server(
         assert compare_path is not None
         async with project_read_lock:
             selection = selected()
-            baseline = await read_project(selection.path)
-            candidate = baseline if selection.path == compare_path else await read_project(compare_path)
+            baseline = await read_project(selection.path, native_cache)
+            candidate = baseline if selection.path == compare_path else await read_project(compare_path, native_cache)
         kind = scope["kind"] if scope else "all"
         program = scope["program"] if scope and scope["kind"] == "program" else None
         report = await asyncio.to_thread(compare, baseline.controller, candidate.controller, kind, program)

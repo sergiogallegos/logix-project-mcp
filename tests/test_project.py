@@ -141,3 +141,63 @@ class WorkerTests(unittest.IsolatedAsyncioTestCase):
             await reader.read_project(self.source)
         self.assertTrue(request.cancelled_caught)
         await self.check_recovery()
+
+    async def test_cache_reuses_only_verified_saved_bytes(self):
+        self.script = "import shutil, sys; shutil.copyfile(sys.argv[1], sys.argv[2])"
+        cache = reader.NativeSnapshotCache()
+        first = await reader.read_project(self.source, cache)
+        first.controller.set("Name", "Mutated in memory")
+        second = await reader.read_project(self.source, cache)
+        self.assertEqual(second.controller.get("Name"), "First")
+        self.assertEqual(len(self.processes), 1)
+
+        old = self.source.stat()
+        self.source.write_bytes(UPDATED)
+        os.utime(self.source, ns=(old.st_atime_ns, old.st_mtime_ns))
+        saved = await reader.read_project(self.source, cache)
+        self.assertEqual(saved.controller.get("Name"), "Later")
+        self.assertEqual(saved.source_sha256, sha256(UPDATED).hexdigest())
+        self.assertEqual(len(self.processes), 2)
+        self.assertEqual(self.source.read_bytes(), UPDATED)
+
+        other = self.source.with_name("Other.ACD")
+        other.write_bytes(UPDATED)
+        await reader.read_project(other, cache)
+        self.assertEqual(len(self.processes), 3)
+        self.source.unlink()
+        with self.assertRaises(reader.ProjectReadError) as failure:
+            await reader.read_project(self.source, cache)
+        self.assertEqual(failure.exception.code, "project_unavailable")
+        self.assertEqual(len(self.processes), 3)
+
+    async def test_invalid_exports_are_not_cached_and_cache_is_bounded(self):
+        cache = reader.NativeSnapshotCache(max_entries=2, max_bytes=len(PROJECT) * 2)
+        self.script = "import pathlib,sys; pathlib.Path(sys.argv[2]).write_text('<invalid/>')"
+        with self.assertRaises(reader.ProjectReadError):
+            await reader.read_project(self.source, cache)
+
+        self.script = "import shutil, sys; shutil.copyfile(sys.argv[1], sys.argv[2])"
+        await reader.read_project(self.source, cache)
+        self.assertEqual(len(self.processes), 2)
+        for name in ("Second.ACD", "Third.ACD"):
+            other = self.source.with_name(name)
+            other.write_bytes(PROJECT)
+            await reader.read_project(other, cache)
+        await reader.read_project(self.source, cache)
+        self.assertEqual(len(self.processes), 5)
+
+        tiny = reader.NativeSnapshotCache(max_bytes=1)
+        await reader.read_project(self.source, tiny)
+        await reader.read_project(self.source, tiny)
+        self.assertEqual(len(self.processes), 7)
+
+    async def test_failed_worker_does_not_publish_cache_entry(self):
+        cache = reader.NativeSnapshotCache()
+        self.script = "import sys; sys.exit(2)"
+        with self.assertRaises(reader.ProjectReadError) as failure:
+            await reader.read_project(self.source, cache)
+        self.assertEqual(failure.exception.code, "sdk_error")
+        self.script = "import shutil, sys; shutil.copyfile(sys.argv[1], sys.argv[2])"
+        await reader.read_project(self.source, cache)
+        await reader.read_project(self.source, cache)
+        self.assertEqual(len(self.processes), 2)

@@ -2,7 +2,7 @@
 
 **1.0 outcome.** An engineer can select the project they have open in Studio 5000, share its latest saved `.ACD` with an MCP client, inspect and compare the project, review a proposed offline edit, and reopen a validated `.ACD` copy or import the reviewed `.L5X` component into Studio 5000. The server also supports the documented `.L5K` and `.L5X` workflows.
 
-**Next task.** [LPM-030](tasks.md#lpm-030) introduces typed offline change proposals. The [Studio 5000 menu installer](../studio-5000-integration.md#install-send-current-project-to-agent) is verified.
+**Next task.** [LPM-024](tasks.md#lpm-024) connects the MCP directly to Codex using a stable selection file. Native snapshot caching is verified.
 
 Follow the [agent workflow](README.md) and record acceptance evidence in the [handoff log](handoff.md). Each task links to its deliverable and verification criteria.
 
@@ -22,6 +22,8 @@ Follow the [agent workflow](README.md) and record acceptance evidence in the [ha
 | [LPM-020](tasks.md#lpm-020) | Studio 5000 integration feasibility | — | Done | Codex on `main` |
 | [LPM-021](tasks.md#lpm-021) | Share and refresh a selected project | LPM-002, LPM-020 | Done | Codex on `main` |
 | [LPM-022](tasks.md#lpm-022) | Installable Studio 5000 Tools menu entry | LPM-021 | Done | Codex on `main` |
+| [LPM-016](tasks.md#lpm-016) | SHA-256 native snapshot cache | LPM-002, LPM-021 | Done | Codex on `main` |
+| [LPM-024](tasks.md#lpm-024) | Direct Codex MCP connection and persistent selection | LPM-021, LPM-022 | Ready | — |
 | [LPM-030](tasks.md#lpm-030) | Typed offline change proposals | LPM-010, LPM-014 | Ready | — |
 | [LPM-031](tasks.md#lpm-031) | Offline tag and metadata edits | LPM-011, LPM-030 | Planned | — |
 | [LPM-032](tasks.md#lpm-032) | Offline ladder and structured text edits | LPM-012, LPM-030 | Planned | — |
@@ -30,11 +32,12 @@ Follow the [agent workflow](README.md) and record acceptance evidence in the [ha
 | [LPM-035](tasks.md#lpm-035) | Local review, approval, and artifact finalization | LPM-030, LPM-034 | Planned | — |
 | [LPM-023](tasks.md#lpm-023) | Open or import reviewed artifacts in Studio 5000 | LPM-022, LPM-035 | Planned | — |
 | [LPM-040](tasks.md#lpm-040) | Failure recovery, file boundaries, and diagnostics | LPM-002, LPM-021, LPM-033 | Planned | — |
-| [LPM-041](tasks.md#lpm-041) | Large-project performance and reliability | LPM-013, LPM-014, LPM-040 | Planned | — |
+| [LPM-041](tasks.md#lpm-041) | Large-project performance and reliability | LPM-013, LPM-014, LPM-016, LPM-040 | Planned | — |
 | [LPM-042](tasks.md#lpm-042) | Packaging, clean installs, and release CI | LPM-001, LPM-022, LPM-035, LPM-040 | Planned | — |
 | [LPM-043](tasks.md#lpm-043) | End-to-end engineer acceptance | LPM-003, LPM-023, LPM-041, LPM-042 | Planned | — |
 | [LPM-044](tasks.md#lpm-044) | User documentation and support guide | LPM-042, LPM-043 | Planned | — |
 | [LPM-045](tasks.md#lpm-045) | Review and publish 1.0 | LPM-004, LPM-044 | Planned | — |
+| [LPM-050](tasks.md#lpm-050) | Read-only diagnostics feasibility | LPM-016, LPM-024 | Planned | — |
 
 ## 1.0 release gate
 
