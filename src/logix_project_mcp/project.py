@@ -25,7 +25,7 @@ COPY_CHUNK_SIZE = 1024 * 1024
 ProjectErrorCode = Literal[
     "project_unavailable", "project_changed", "invalid_project", "unsupported_platform",
     "sdk_timeout", "sdk_error", "not_found", "destination_exists", "export_failed",
-    "selection_required", "invalid_selection", "selection_changed",
+    "selection_required", "invalid_selection", "selection_changed", "ambiguous_target", "invalid_proposal",
 ]
 
 

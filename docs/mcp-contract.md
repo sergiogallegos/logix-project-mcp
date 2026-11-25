@@ -13,6 +13,9 @@ Call `tools/list` to discover the JSON Schema for each tool's arguments and succ
 | `read_routine` | Required `program` and `routine` strings | `result` string, `source_sha256`, and [routine inspection](#routine-inspection) |
 | `search_project` | Required `query`. Optional `kind`, `program`, and [paging arguments](#scoped-search-and-cross-references). | Saved source identity, `matches`, and `next_offset` |
 | `find_references` | Required `name`. Optional `kind`, `program`, and [paging arguments](#scoped-search-and-cross-references). | Saved source identity, `matches`, and `next_offset` |
+| `preview_change_proposal` | Required `expected_source_sha256`, `operations`, and in shared mode `expected_selection_id` | [Typed documentation preview](#offline-change-proposals), source identity, and `approval_id` |
+| `validate_change_proposal` | Required `proposal`, `expected_approval_id` | `valid: true`, source identity, and checked `approval_id` |
+| `create_documentation_copy` | Required `proposal`, `expected_approval_id`, and new `.L5X` `filename` when an export directory is configured | [Documentation-only artifact](#documentation-copy), source identity, approval identity, and artifact SHA-256 |
 | `compare_projects` | Optional `scope` when a candidate was [selected at launch](#project-comparison) | `before`, `after`, scoped `changes`, and `protected_components` |
 | `export_project` | Required `filename` and optional `component` when an [export directory](#offline-export) was selected at launch | `path`, `format`, `component`, and `source_sha256` |
 
@@ -101,6 +104,39 @@ Components match by kind and case-insensitive qualified name. The controller is 
 
 Comparison normalizes XML indentation and attribute order and ignores export headers, common author and timestamp attributes, and `Use` context markers. Decorated tag values take precedence when an export also includes a redundant raw or L5K value. Saved settings such as the controller serial number, tag values, and schedule or rung order are compared. Protected components are listed in `protected_components` and compared using available metadata. [Rockwell Logix 5000 Import/Export reference](https://literature.rockwellautomation.com/idc/groups/literature/documents/rm/1756-rm014_-en-p.pdf)
 
+## Offline change proposals
+
+Both proposal tools are read-only and available without an export directory. First inspect the saved project, then pass its `source_sha256` as `expected_source_sha256`. In shared mode also pass the inspected `selection.selection_id` as `expected_selection_id`. The operation list must contain 1–50 entries.
+
+Version 1 supports only `set_description`: documentation for an existing controller, program, controller tag, or program tag. No tag values, control logic, project settings, or files are changed. Target records are typed and names resolve without regard to case; the returned target uses the spelling from the export. A program tag must specify its program, even if a controller tag has the same name.
+
+| Target `kind` | Required additional fields |
+| --- | --- |
+| `controller` | None |
+| `program` | `program` |
+| `controller_tag` | `name` |
+| `program_tag` | `program`, `name` |
+
+For example, the operations argument can contain:
+
+```json
+[{"operation":"set_description","target":{"kind":"program_tag","program":"Main","name":"Counter"},"description":"Sample documentation"}]
+```
+
+Descriptions are limited to 4,096 characters and must be valid XML text. A description of `null` proposes removing it; an empty string proposes an empty description. The preview preserves that distinction on both sides. Unsupported operations, multiple matching names, repeated targets, protected tags, and unsupported description structures are rejected.
+
+The response includes `schema_version: 1`, `source` (absolute path, nullable selection ID, SHA-256, controller name and software revision), normalized `operations`, and ordered `preview` entries with explicit `before` and `after` values. The `approval_id` is the SHA-256 of the ASCII JSON encoding of those fields, with sorted keys, no insignificant whitespace, and non-ASCII characters escaped.
+
+Present the complete proposal to the reviewer and retain its approval identity independently. To check a previously reviewed proposal, send the unchanged proposal and that retained value as `expected_approval_id` to `validate_change_proposal`. Validation re-reads the selected saved project and rebuilds the entire preview; changes to the source bytes, selection, target, operation, before/after text, or identity are rejected. A successful check confirms content consistency at inspection time, not authorization or a guarantee against subsequent saves. The identity is a digest, not a signature or proof of human approval. No edit or artifact is materialized by either preview or validation.
+
+## Documentation copy
+
+With `--export-dir` configured, `create_documentation_copy` accepts a reviewed proposal, its independently retained `expected_approval_id`, and a new basename ending in `.L5X`. It reads a verified copy of the selected full UTF-8 L5X, validates the proposal against that exact snapshot, and changes only the targeted description byte ranges. Creating a description in a self-closing element also expands that element's closing delimiter. Other XML bytes, including logic, attributes, data, comments, and CDATA, remain unchanged.
+
+The tool reparses the staged result and checks each description against the reviewed preview, checks the staged bytes, and rechecks the selected source fingerprint and selection immediately before publishing. A competing destination is never replaced. The result contains the absolute `path`, `format: "l5x"`, `source`, `approval_id`, and `artifact_sha256`. A save or selection change after the final check is still possible; the result identifies the exact source snapshot used.
+
+This is an SDK-free documentation-only workflow. It supports creating, replacing, and removing descriptions of existing controllers, programs, and scoped tags. Native ACD/L5K input, non-UTF-8 L5X, changing tag declarations or values, and modifying routine logic are not supported. The staged XML and preservation checks do not constitute Studio 5000 import or project verification.
+
 ## Offline export
 
 Add `--export-dir` and an existing directory to the launch arguments to enable `export_project`. The export uses the selected saved file. Supply a filename without directory segments. The server publishes the finished artifact only when there is no existing entry at the destination. It returns the absolute artifact `path`, lowercase `format`, requested `component` or `null`, and the source snapshot's SHA-256.
@@ -152,7 +188,7 @@ Expected failures return `isError: true` and a human-readable `content` block. C
 | `unknown_tool` | The requested tool name is absent from this server. |
 | `not_found` | The named program or routine is absent from the saved project. |
 | `project_unavailable` | The source or a working file could not be read or copied. |
-| `project_changed` | The source changed during copying. Retry after the save completes. |
+| `project_changed` | The source changed during copying or differs from an expected saved fingerprint. Inspect the latest saved version. |
 | `invalid_project` | The XML is invalid, rejected by the parser, or missing the required full project structure. |
 | `unsupported_platform` | The operation requires the Rockwell SDK on Windows. |
 | `sdk_timeout` | The SDK worker exceeded its export time limit. |
@@ -161,6 +197,8 @@ Expected failures return `isError: true` and a human-readable `content` block. C
 | `export_failed` | An output file could not be created, validated, or published. |
 | `selection_required` | Share a saved project using the local helper. |
 | `invalid_selection` | The configured selection file could not be read as a valid selection. |
-| `selection_changed` | The selection ID changed during a search page sequence. |
+| `selection_changed` | The project selection differs from the expected search or proposal selection. |
+| `ambiguous_target` | A proposal target matches multiple components or addresses the same description more than once. |
+| `invalid_proposal` | The proposal cannot be previewed or the reviewed content and identity do not match. |
 
 Use `code` for programmatic handling and display `message` to the user. MCP handles malformed protocol messages and cancellation replies separately.

@@ -16,6 +16,7 @@ from mcp.types import CallToolResult, TextContent, Tool, ToolAnnotations
 from pydantic import AfterValidator, ConfigDict, Field, TypeAdapter, ValidationError
 
 from .comparison import ComparisonReport, compare
+from .documentation import DocumentationCopy, stage_documentation_copy
 from .export import ExportComponent, ExportedFile, export_saved_project, validate_filename
 from .inventory import (
     ProjectInventory,
@@ -35,6 +36,7 @@ from .project import (
     read_project,
 )
 from .routines import RoutineInspection, inspect_routine
+from .proposals import Operations, Proposal, ProposalValidation, create_proposal, validate_proposal
 from .search import ProjectSearch, SearchKind, SearchMatch, SymbolKind, page
 from .selection import ProjectSelection, SelectionId, SelectionResult, read_selection, validate_project_path
 
@@ -101,6 +103,24 @@ class ExportArguments(ToolArguments):
         AfterValidator(validate_filename),
     ]
     component: NotRequired[ExportComponent | None]
+
+
+class PreviewProposalArguments(ToolArguments):
+    expected_source_sha256: SourceHash
+    expected_selection_id: NotRequired[SelectionId | None]
+    operations: Operations
+
+
+class ValidateProposalArguments(ToolArguments):
+    proposal: Proposal
+    expected_approval_id: SourceHash
+
+
+class DocumentationCopyArguments(ValidateProposalArguments):
+    filename: Annotated[
+        str, Field(pattern=r'^[^<>:"/\\|?*\x00-\x1f]+[.][lL]5[xX]$', max_length=255),
+        AfterValidator(validate_filename),
+    ]
 
 
 class ToolErrorDetails(TypedDict):
@@ -346,6 +366,30 @@ def create_server(
         report = await asyncio.to_thread(compare, baseline.controller, candidate.controller, kind, program)
         return {"before": comparison_source(selection.path, baseline), "after": comparison_source(compare_path, candidate), **report, **selection.identity(baseline)}
 
+    async def preview_change_proposal(
+        expected_source_sha256: str, operations: Operations, expected_selection_id: str | None = None,
+    ) -> Proposal:
+        """Preview documentation-only changes against an inspected saved project. Does not modify any project."""
+        selection, snapshot = await load()
+        if selection.selection_id != expected_selection_id:
+            raise ProjectReadError("selection_changed", "Inspect the shared selection before creating a proposal.")
+        if snapshot.source_sha256 != expected_source_sha256:
+            raise ProjectReadError("project_changed", "Inspect the latest saved project before creating a proposal.")
+        return create_proposal(selection, snapshot, operations)
+
+    async def validate_change_proposal(proposal: Proposal, expected_approval_id: str) -> ProposalValidation:
+        """Check a previously reviewed documentation preview against its identity and current saved source. No edits are applied."""
+        selection, snapshot = await load()
+        return validate_proposal(selection, snapshot, proposal, expected_approval_id)
+
+    async def create_documentation_copy(
+        proposal: Proposal, expected_approval_id: str, filename: str,
+    ) -> DocumentationCopy:
+        """Create a new offline L5X copy with reviewed description changes only. Never overwrite an existing file."""
+        assert export_dir is not None
+        async with project_read_lock:
+            return await stage_documentation_copy(selected(), selected, export_dir, filename, proposal, expected_approval_id)
+
     async def export_project(filename: str, component: ExportComponent | None = None) -> ExportedFile | CallToolResult:
         """Export the selected saved project or a component to a new file in the configured export directory."""
         assert export_dir is not None
@@ -369,12 +413,17 @@ def create_server(
         (read_routine, ReadRoutineArguments, RoutineResult),
         (search_project, SearchArguments, SearchResult),
         (find_references, ReferenceArguments, SearchResult),
+        (preview_change_proposal, PreviewProposalArguments, Proposal),
+        (validate_change_proposal, ValidateProposalArguments, ProposalValidation),
         (get_capabilities, ToolArguments, Capabilities),
     )
     if compare_path is not None:
         registrations += ((compare_projects, CompareArguments, ComparisonResult),)
     if export_dir is not None:
-        registrations += ((export_project, ExportArguments, ExportedFile),)
+        registrations += (
+            (export_project, ExportArguments, ExportedFile),
+            (create_documentation_copy, DocumentationCopyArguments, DocumentationCopy),
+        )
     for handler, request_type, result_type in registrations:
         arguments = TypeAdapter(request_type)
         tool = Tool(
@@ -382,7 +431,7 @@ def create_server(
             description=handler.__doc__,
             inputSchema=arguments.json_schema(),
             outputSchema=TypeAdapter(result_type).json_schema(),
-            annotations=EXPORT_WRITE if handler is export_project else READ_ONLY,
+            annotations=EXPORT_WRITE if handler in (export_project, create_documentation_copy) else READ_ONLY,
             _meta={ERROR_SCHEMA_KEY: error_schema},
         )
         tools[tool.name] = tool, arguments, handler

@@ -10,6 +10,10 @@ python -m unittest discover -s tests -v
 
 The default test suite starts a real local MCP process and verifies tool schemas, capabilities, reads, exports, and errors with a synthetic project. It checks that an occupied export destination survives a request, including when the file appears while an export is in progress. It also exercises concurrent reads, source changes, cancellation, and timeout recovery with a stand-in SDK subprocess. To build a distributable wheel, run `python -m pip wheel --no-deps --wheel-dir dist .`.
 
+Proposal tests verify the documentation-only preview and content identity through MCP stdio, with duplicate scoped names, modified previews, stale saved bytes, unsupported operations, and selection refresh or switching. The optional native smoke test also checks proposal preview and validation without modifying the sample.
+
+Documentation-copy tests cover creation, replacement, and removal of existing component descriptions, exact preservation of unrelated XML bytes, staged artifact fingerprints, invalid encoding, changed source and selection during staging, and destination collisions. These are SDK-free L5X checks, not Studio 5000 import verification.
+
 Shared-selection tests launch the packaged sharing module and switch between same-named projects in an existing MCP session. They exercise refresh, missing and moved files, stale search pages, and failed selection validation.
 
 Custom Tools tests exercise installation, updates, and removal on disposable XML configurations, including repeated operations, backup contents, menu name conflicts, and an intervening file change. Use the [Windows menu walkthrough](docs/studio-5000-integration.md#install-send-current-project-to-agent) for desktop validation.

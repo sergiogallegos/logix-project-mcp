@@ -116,7 +116,7 @@ class StdioTests(unittest.IsolatedAsyncioTestCase):
                 tools = {tool.name: tool for tool in (await client.list_tools()).tools}
                 self.assertEqual(set(tools), {
                     "get_capabilities", "get_inventory", "get_project", "list_tags", "read_routine",
-                    "search_project", "find_references",
+                    "search_project", "find_references", "preview_change_proposal", "validate_change_proposal",
                 })
                 error_schema = tools["get_project"].meta["logix-project-mcp/error-schema"]
                 for tool in tools.values():
@@ -241,6 +241,22 @@ class StdioTests(unittest.IsolatedAsyncioTestCase):
                     self.assertTrue(summary.structuredContent["software_revision"])
                     self.assertEqual(summary.structuredContent["format"], project.suffix[1:].lower())
                     self.assertEqual(summary.structuredContent["source_sha256"], original.hex())
+                preview = await client.call_tool("preview_change_proposal", {
+                    "expected_source_sha256": original.hex(),
+                    "operations": [{
+                        "operation": "set_description", "target": {"kind": "controller"},
+                        "description": "Synthetic review note",
+                    }],
+                })
+                self.assertFalse(preview.isError, preview.content)
+                proposal = preview.structuredContent
+                self.assertEqual(proposal["source"]["source_sha256"], original.hex())
+                self.assertEqual(proposal["preview"][0]["after"], "Synthetic review note")
+                verified = await client.call_tool("validate_change_proposal", {
+                    "proposal": proposal, "expected_approval_id": proposal["approval_id"],
+                })
+                self.assertFalse(verified.isError, verified.content)
+                self.assertTrue(verified.structuredContent["valid"])
         finally:
             with project.open("rb") as source:
                 self.assertEqual(hashlib.file_digest(source, "sha256").digest(), original)
