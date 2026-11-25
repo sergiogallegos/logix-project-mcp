@@ -130,6 +130,12 @@ Added [`verify_documentation_copy`](../mcp-contract.md#documentation-copy), a re
 
 The 31-test suite passed both the editable installation and the built wheel in the SDK-free Windows Python 3.12.10 test environment (30 passed, one optional native test skipped); `pip check` passed. Synthetic MCP tests covered exact source/output preservation, concurrent verification, wrong or replaced hashes, altered descriptions and unrelated XML, missing artifacts, tampered proposals, stale saves, and path validation. Race tests covered source, artifact, and selection changes during verification. No native SDK edit or import was attempted. The documentation artifact slice is verified, but LPM-033's original native ACD and component output requirements and its broader editing prerequisites remain open.
 
+## 2026-11-25 · LPM-034 · In progress (documentation preservation and SDK reopen slice verified) · Codex on `main`
+
+Added synthetic AOI and opaque protected-record preservation tests and a conservative rejection of recognized safety-class, lock and signature indicators for documentation proposals, leaving saved-project reads available. The verifier now explicitly returns `vendor_verification: "not_performed"`; exact XML verification does not authenticate a signature or certify a vendor build. See [verification limits and reproduction](../compatibility.md#documentation-verification).
+
+The SDK-free wheel passed 32 tests, with two optional native checks skipped (34 total); `pip check` passed. The editable package passed the applicable regression tests before addition of the optional SDK test. On Windows 11, Python 3.12.10, Rockwell SDK wheel 2.0.2 and the synthetic Logix Designer revision 38.02 full L5X, the optional SDK test passed. It opened and re-exported a scratch copy of the MCP-created documentation artifact, verified the exact reviewed controller CDATA text and other inventory fields, and confirmed the original source and reviewed artifact hashes. The initial direct text assertion differed because of vendor formatting newlines outside CDATA; this was diagnosed and resolved by checking the CDATA payload. No build, native project edit, safety-signature validation, or live controller operation was attempted. Broader LPM-034 requirements remain open alongside LPM-031 through LPM-033.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.

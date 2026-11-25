@@ -96,7 +96,10 @@ class DocumentationCopyTests(unittest.IsolatedAsyncioTestCase):
                 verification = {**request, "expected_artifact_sha256": result["artifact_sha256"]}
                 validate(verification, verifier.inputSchema)
                 checked = await call(verifier.name, verification)
-                self.assertEqual(checked, {**result, "valid": True, "verification": "exact_documentation_copy"})
+                self.assertEqual(checked, {
+                    **result, "valid": True, "verification": "exact_documentation_copy",
+                    "vendor_verification": "not_performed",
+                })
                 self.assertEqual(await asyncio.gather(call(verifier.name, verification), call(verifier.name, verification)), [checked, checked])
                 await call(verifier.name, {**verification, "expected_artifact_sha256": "0" * 64}, "artifact_changed")
                 await call(verifier.name, {**verification, "filename": "Missing.L5X"}, "artifact_unavailable")

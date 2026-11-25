@@ -26,6 +26,29 @@ def xml_text(value: str) -> str:
 
 Description = Annotated[str, Field(max_length=4096), AfterValidator(xml_text)]
 
+# Presence of these markers does not establish signature validity. This workflow
+# does not have vendor safety verification, so it cannot stage such projects.
+SAFETY_SIGNATURE_MARKERS = {
+    "safetysignature", "safetysignatureid", "safetysignaturetimestamp", "safetysignatureshmac",
+    "parametersandlocaltagsrollupsignature",
+}
+
+
+def check_documentation_boundary(root: Element) -> None:
+    def local_name(name: str) -> str:
+        return name.rsplit("}", 1)[-1].casefold()
+
+    for node in root.iter():
+        attributes = {local_name(name): value for name, value in node.attrib.items()}
+        if (local_name(node.tag) in SAFETY_SIGNATURE_MARKERS
+                or SAFETY_SIGNATURE_MARKERS.intersection(attributes)
+                or attributes.get("class", "").casefold() == "safety"
+                or attributes.get("safetylocked", "").casefold() in ("true", "1")):
+            raise ProjectReadError(
+                "unsupported_safety_content",
+                "Documentation proposals are not supported for exports with recognized safety-class or safety-signature indicators.",
+            )
+
 
 class StrictRecord(TypedDict):
     __pydantic_config__ = ConfigDict(extra="forbid")
@@ -154,6 +177,7 @@ def canonical_json(value: object) -> bytes:
 
 
 def create_proposal(selection: ProjectSelection, snapshot: ProjectSnapshot, operations: Operations) -> Proposal:
+    check_documentation_boundary(snapshot.root)
     normalized: Operations = []
     preview: list[PreviewEntry] = []
     seen: set[bytes] = set()

@@ -33,6 +33,7 @@ class DocumentationCopy(StrictRecord):
 class DocumentationVerification(DocumentationCopy):
     valid: Literal[True]
     verification: Literal["exact_documentation_copy"]
+    vendor_verification: Literal["not_performed"]
 
 
 @dataclass
@@ -256,4 +257,5 @@ async def verify_documentation_copy(
         "path": str(artifact_path), "format": "l5x", "source": proposal["source"],
         "approval_id": expected_approval_id, "artifact_sha256": artifact_digest,
         "valid": True, "verification": "exact_documentation_copy",
+        "vendor_verification": "not_performed",
     }

@@ -16,7 +16,7 @@ Call `tools/list` to discover the JSON Schema for each tool's arguments and succ
 | `preview_change_proposal` | Required `expected_source_sha256`, `operations`, and in shared mode `expected_selection_id` | [Typed documentation preview](#offline-change-proposals), source identity, and `approval_id` |
 | `validate_change_proposal` | Required `proposal`, `expected_approval_id` | `valid: true`, source identity, and checked `approval_id` |
 | `create_documentation_copy` | Required `proposal`, `expected_approval_id`, and new `.L5X` `filename` when an export directory is configured | [Documentation-only artifact](#documentation-copy), source identity, approval identity, and artifact SHA-256 |
-| `verify_documentation_copy` | Required `proposal`, `expected_approval_id`, existing `.L5X` `filename`, and `expected_artifact_sha256` when an export directory is configured | Artifact identity and `valid: true`, `verification: "exact_documentation_copy"` |
+| `verify_documentation_copy` | Required `proposal`, `expected_approval_id`, existing `.L5X` `filename`, and `expected_artifact_sha256` when an export directory is configured | Artifact identity and `valid: true`, `verification: "exact_documentation_copy"`, `vendor_verification: "not_performed"` |
 | `compare_projects` | Optional `scope` when a candidate was [selected at launch](#project-comparison) | `before`, `after`, scoped `changes`, and `protected_components` |
 | `export_project` | Required `filename` and optional `component` when an [export directory](#offline-export) was selected at launch | `path`, `format`, `component`, and `source_sha256` |
 
@@ -127,6 +127,8 @@ For example, the operations argument can contain:
 
 Descriptions are limited to 4,096 characters and must be valid XML text. A description of `null` proposes removing it; an empty string proposes an empty description. The preview preserves that distinction on both sides. Unsupported operations, multiple matching names, repeated targets, protected tags and routines, routines without saved Ladder/ST content, and unsupported description structures are rejected.
 
+The documentation workflow rejects exports containing recognized safety-class, safety-locked or safety-signature indicators. This is a conservative unsupported-content check, not an authentication-code or safety-signature validator; the absence of an indicator does not certify a project's safety status. Read-only inspection remains available. Rockwell documents signature-specific export and import considerations in the [Logix 5000 Import/Export reference, chapter 20](https://literature.rockwellautomation.com/idc/groups/literature/documents/rm/1756-rm014_-en-p.pdf) and the [SDK Getting Results Guide](https://literature.rockwellautomation.com/idc/groups/literature/documents/gr/ldsdk-gr001_-en-p.pdf).
+
 The response includes `schema_version: 1`, `source` (absolute path, nullable selection ID, SHA-256, controller name and software revision), normalized `operations`, and ordered `preview` entries with explicit `before` and `after` values. The `approval_id` is the SHA-256 of the ASCII JSON encoding of those fields, with sorted keys, no insignificant whitespace, and non-ASCII characters escaped.
 
 Present the complete proposal to the reviewer and retain its approval identity independently. To check a previously reviewed proposal, send the unchanged proposal and that retained value as `expected_approval_id` to `validate_change_proposal`. Validation re-reads the selected saved project and rebuilds the entire preview; changes to the source bytes, selection, target, operation, before/after text, or identity are rejected. A successful check confirms content consistency at inspection time, not authorization or a guarantee against subsequent saves. The identity is a digest, not a signature or proof of human approval. No edit or artifact is materialized by either preview or validation.
@@ -141,7 +143,7 @@ This is an SDK-free documentation-only workflow. It supports creating, replacing
 
 Retain the proposal, reviewed approval identity, and the creation result's `artifact_sha256` independently. To check an existing output later, call the read-only `verify_documentation_copy` with those values and the artifact's basename in the configured export directory. The tool makes verified temporary copies of the saved source and artifact, checks the retained digest, reconstructs the expected documentation output from the reviewed proposal, and compares the entire artifact byte for byte. It checks both files and the selection again before returning. A new digest for an altered artifact cannot make it match the original reviewed output. Missing files, stale sources, changed selections, modified proposals, and altered artifacts fail without changing the source or artifact. Success provides `valid: true` and `verification: "exact_documentation_copy"` alongside the existing artifact identity fields.
 
-This confirms exact correspondence to the supported documentation proposal as of the verification snapshots. It is not proof of human approval, a vendor build or import check, or a guarantee that an external process cannot modify the files after verification.
+This confirms exact correspondence to the supported documentation proposal as of the verification snapshots. The result explicitly includes `vendor_verification: "not_performed"`. It is not proof of human approval, a vendor build or import check, or a guarantee that an external process cannot modify the files after verification. See the [compatibility notes](compatibility.md#documentation-verification) for separately recorded vendor smoke checks.
 
 ## Offline export
 
@@ -208,5 +210,6 @@ Expected failures return `isError: true` and a human-readable `content` block. C
 | `invalid_proposal` | The proposal cannot be previewed or the reviewed content and identity do not match. |
 | `artifact_changed` | A documentation artifact has changed during verification, differs from its retained digest, or is not the exact reviewed output. |
 | `artifact_unavailable` | The documentation artifact or temporary verification copy could not be read. |
+| `unsupported_safety_content` | The proposal source contains recognized safety-class, lock or signature indicators outside the documentation workflow's supported boundary. |
 
 Use `code` for programmatic handling and display `message` to the user. MCP handles malformed protocol messages and cancellation replies separately.

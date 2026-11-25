@@ -16,6 +16,10 @@ Documentation-copy tests cover creation, replacement, and removal of existing co
 
 Artifact verification tests also check concurrent read-only calls, retained fingerprints, modified descriptions and unrelated content, missing artifacts, stale sources, and source, artifact, or selection changes during verification.
 
+Preservation tests use synthetic AOI definitions and opaque protected records, require exact preservation of unrelated XML, and reject representative safety-signature and safety-class indicators without blocking normal saved-project inspection. The verifier explicitly reports that vendor verification was not performed.
+
+For the optional SDK documentation reopen test, see [documentation verification](docs/compatibility.md#documentation-verification).
+
 Routine-documentation tests exercise same-named Ladder and Structured Text routines in separate programs through the MCP tools, rejection of ambiguous, protected, unsupported and missing routines, and byte-for-byte preservation of saved source, comments, and pending sections.
 
 Shared-selection tests launch the packaged sharing module and switch between same-named projects in an existing MCP session. They exercise refresh, missing and moved files, stale search pages, and failed selection validation.

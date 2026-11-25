@@ -23,6 +23,14 @@ On the same Windows and SDK versions, revision 38.02 `.ACD` and `.L5K` inputs ea
 
 Logix Designer desktop imported the full `.L5X` exported from `.ACD` and created a separate `.ACD` from it.
 
+## Documentation verification
+
+The SDK-free `verify_documentation_copy` checks exact correspondence to the reviewed description proposal and returns `vendor_verification: "not_performed"`. Synthetic preservation tests cover ordinary and encoded AOIs, protected routines, and rejection of recognized safety signatures or safety-class content. These are XML checks, not a vendor build, safety-signature validation, or import qualification.
+
+On the Windows 11 / SDK wheel 2.0.2 host, a separate vendor smoke check used the SDK-created synthetic revision 38.02 full L5X. The MCP generated and verified a separate copy containing a controller description. The SDK opened and re-exported a scratch copy of the artifact. Its actual CDATA content matched the reviewed description, the revision and other inventory fields matched the source, and the source and artifact retained their exact hashes. The initial naive text comparison differed by the two line breaks that the vendor emits outside CDATA; the follow-up checked the actual CDATA text and passed. This is one standard-project SDK reopen test, not a project build or evidence for every description type, revision, or protected/safety project.
+
+To repeat this optional test, use only a synthetic full L5X sample from the matching installed revision and set `LOGIX_PROJECT_MCP_TEST_DOCUMENTATION_L5X` to its path. Run `python -m unittest discover -s tests -p test_documentation_vendor.py -v` in the SDK-enabled environment. The test uses temporary copies and does not perform a build or contact a controller.
+
 ## Native snapshot cache measurements
 
 On the Windows 11 build 26200 and SDK wheel 2.0.2 setup above, one MCP session read synthetic revision 38.02 projects through shared selection. The elapsed times include the verified source copy, XML inspection, and MCP response.

@@ -79,11 +79,13 @@ Add a local stdio server in your MCP client. Replace both paths in the `mcpServe
 | `preview_change_proposal` | Typed, source-bound before-and-after previews for controller, program, tag, and Ladder/ST routine descriptions, with approval identity |
 | `validate_change_proposal` | Check the reviewed preview and identity against the current saved project |
 | `create_documentation_copy` | A new UTF-8 full `.L5X` copy containing reviewed description changes only, when export is enabled |
-| `verify_documentation_copy` | Verify an existing documentation copy against its reviewed proposal and retained artifact hash, when export is enabled |
+| `verify_documentation_copy` | Verify existing documentation artifact bytes against the reviewed proposal and retained hash; reports that vendor verification was not performed |
 | `compare_projects` | Scoped changes between the selected project and configured candidate |
 | `export_project` | A new full `.L5X` or `.L5K` file, or a component `.L5X`, in your chosen directory |
 
 To enable comparison, add `--compare-project` followed by the candidate path in the MCP configuration's `args` array.
+
+The documentation workflow rejects exports with recognized safety-class or safety-signature indicators. The original saved-project inspection tools remain available. See the [verification and preservation limits](docs/compatibility.md#documentation-verification) for the distinction between exact-artifact and vendor checks.
 
 To enable export, add `--export-dir` followed by an existing directory you choose. Ask the agent for a new filename in that directory, such as `Review.L5X`. The tool reads a snapshot of the selected project and preserves existing files. Copying a full `.L5X` to a new `.L5X` keeps its exact bytes and works without the SDK. Converting formats and exporting components use the Rockwell SDK on Windows.
 
