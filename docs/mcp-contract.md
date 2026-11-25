@@ -108,7 +108,7 @@ Comparison normalizes XML indentation and attribute order and ignores export hea
 
 Both proposal tools are read-only and available without an export directory. First inspect the saved project, then pass its `source_sha256` as `expected_source_sha256`. In shared mode also pass the inspected `selection.selection_id` as `expected_selection_id`. The operation list must contain 1–50 entries.
 
-Version 1 supports only `set_description`: documentation for an existing controller, program, controller tag, or program tag. No tag values, control logic, project settings, or files are changed. Target records are typed and names resolve without regard to case; the returned target uses the spelling from the export. A program tag must specify its program, even if a controller tag has the same name.
+Version 1 supports only `set_description`: documentation for an existing controller, program, controller tag, program tag, or saved readable Ladder or Structured Text routine. No tag values, control logic, project settings, or files are changed. Target records are typed and names resolve without regard to case; the returned target uses the spelling from the export. A program tag or routine must specify its program, even when another program or controller scope contains the same name.
 
 | Target `kind` | Required additional fields |
 | --- | --- |
@@ -116,6 +116,7 @@ Version 1 supports only `set_description`: documentation for an existing control
 | `program` | `program` |
 | `controller_tag` | `name` |
 | `program_tag` | `program`, `name` |
+| `routine` | `program`, `name` |
 
 For example, the operations argument can contain:
 
@@ -123,7 +124,7 @@ For example, the operations argument can contain:
 [{"operation":"set_description","target":{"kind":"program_tag","program":"Main","name":"Counter"},"description":"Sample documentation"}]
 ```
 
-Descriptions are limited to 4,096 characters and must be valid XML text. A description of `null` proposes removing it; an empty string proposes an empty description. The preview preserves that distinction on both sides. Unsupported operations, multiple matching names, repeated targets, protected tags, and unsupported description structures are rejected.
+Descriptions are limited to 4,096 characters and must be valid XML text. A description of `null` proposes removing it; an empty string proposes an empty description. The preview preserves that distinction on both sides. Unsupported operations, multiple matching names, repeated targets, protected tags and routines, routines without saved Ladder/ST content, and unsupported description structures are rejected.
 
 The response includes `schema_version: 1`, `source` (absolute path, nullable selection ID, SHA-256, controller name and software revision), normalized `operations`, and ordered `preview` entries with explicit `before` and `after` values. The `approval_id` is the SHA-256 of the ASCII JSON encoding of those fields, with sorted keys, no insignificant whitespace, and non-ASCII characters escaped.
 
@@ -135,7 +136,7 @@ With `--export-dir` configured, `create_documentation_copy` accepts a reviewed p
 
 The tool reparses the staged result and checks each description against the reviewed preview, checks the staged bytes, and rechecks the selected source fingerprint and selection immediately before publishing. A competing destination is never replaced. The result contains the absolute `path`, `format: "l5x"`, `source`, `approval_id`, and `artifact_sha256`. A save or selection change after the final check is still possible; the result identifies the exact source snapshot used.
 
-This is an SDK-free documentation-only workflow. It supports creating, replacing, and removing descriptions of existing controllers, programs, and scoped tags. Native ACD/L5K input, non-UTF-8 L5X, changing tag declarations or values, and modifying routine logic are not supported. The staged XML and preservation checks do not constitute Studio 5000 import or project verification.
+This is an SDK-free documentation-only workflow. It supports creating, replacing, and removing descriptions of existing controllers, programs, scoped tags, and readable Ladder or Structured Text routines. Rung comments, inline ST comments, online-edit sections, routine dependencies and executable content remain unchanged. Native ACD/L5K input, non-UTF-8 L5X, changing tag declarations or values, creating routines, and modifying routine logic are not supported. The staged XML and preservation checks do not constitute Studio 5000 import or project verification.
 
 ## Offline export
 

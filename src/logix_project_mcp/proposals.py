@@ -51,8 +51,14 @@ class ProgramTagTarget(StrictRecord):
     name: Name
 
 
+class RoutineTarget(StrictRecord):
+    kind: Literal["routine"]
+    program: Name
+    name: Name
+
+
 Target = Annotated[
-    ControllerTarget | ProgramTarget | ControllerTagTarget | ProgramTagTarget,
+    ControllerTarget | ProgramTarget | ControllerTagTarget | ProgramTagTarget | RoutineTarget,
     Field(discriminator="kind"),
 ]
 
@@ -121,11 +127,19 @@ def resolve_target(controller: Element, target: Target) -> tuple[Target, Element
     if target["kind"] == "controller":
         return {"kind": "controller"}, controller
     scope = controller
-    if target["kind"] in ("program", "program_tag"):
+    if target["kind"] in ("program", "program_tag", "routine"):
         scope = unique_named(controller.findall("Programs/Program"), target["program"], "Program")
         program = scope.attrib["Name"]
         if target["kind"] == "program":
             return {"kind": "program", "program": program}, scope
+        if target["kind"] == "routine":
+            routine = unique_named(component_entries(scope, "Routines", "Routine"), target["name"], "Routine")
+            if has_protection(routine):
+                raise ProjectReadError("invalid_proposal", "Protected routine descriptions are not supported.")
+            language = routine.get("Type", "").upper()
+            if language not in ("RLL", "ST") or routine.find(f"{language}Content") is None:
+                raise ProjectReadError("invalid_proposal", "Routine documentation requires a saved Ladder or Structured Text routine.")
+            return {"kind": "routine", "program": program, "name": routine.attrib["Name"]}, routine
     tag = unique_named(component_entries(scope, "Tags", "Tag"), target["name"], "Tag")
     if has_protection(tag):
         raise ProjectReadError("invalid_proposal", "Protected tag descriptions are not supported.")

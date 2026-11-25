@@ -74,7 +74,7 @@ Add a local stdio server in your MCP client. Replace both paths in the `mcpServe
 | `read_routine` | Saved routine source, language-specific sections, and protection status |
 | `search_project` | Scoped declarations, comments, and resolved references matching a query |
 | `find_references` | Locations that refer to a specific declaration, including through alias chains |
-| `preview_change_proposal` | Typed, source-bound before-and-after documentation preview and approval identity |
+| `preview_change_proposal` | Typed, source-bound before-and-after previews for controller, program, tag, and Ladder/ST routine descriptions, with approval identity |
 | `validate_change_proposal` | Check the reviewed preview and identity against the current saved project |
 | `create_documentation_copy` | A new UTF-8 full `.L5X` copy containing reviewed description changes only, when export is enabled |
 | `compare_projects` | Scoped changes between the selected project and configured candidate |

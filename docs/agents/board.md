@@ -2,7 +2,7 @@
 
 **1.0 outcome.** An engineer can select the project they have open in Studio 5000, share its latest saved `.ACD` with an MCP client, inspect and compare the project, review a proposed offline edit, and reopen a validated `.ACD` copy or import the reviewed `.L5X` component into Studio 5000. The server also supports the documented `.L5K` and `.L5X` workflows.
 
-**Current task.** [LPM-031](tasks.md#lpm-031): the agreed documentation-only slice is implemented and verified. Reviewed descriptions can be created, replaced, or removed in a new full UTF-8 L5X copy. Broader tag operations in the original brief remain unimplemented.
+**Current progress.** [LPM-031](tasks.md#lpm-031) and [LPM-032](tasks.md#lpm-032): documentation-only slices are implemented and verified. Reviewed controller, program, scoped tag, and existing Ladder/ST routine descriptions can be created, replaced, or removed in a new full UTF-8 L5X copy. Broader tag and routine operations in the original briefs remain unimplemented.
 
 Follow the [agent workflow](README.md) and record acceptance evidence in the [handoff log](handoff.md). Each task links to its deliverable and verification criteria.
 
@@ -26,7 +26,7 @@ Follow the [agent workflow](README.md) and record acceptance evidence in the [ha
 | [LPM-024](tasks.md#lpm-024) | Direct Codex MCP connection and persistent selection | LPM-021, LPM-022 | Done | Codex on `main` |
 | [LPM-030](tasks.md#lpm-030) | Typed offline change proposals | LPM-010, LPM-014 | Done | Codex on `main` |
 | [LPM-031](tasks.md#lpm-031) | Offline tag and metadata edits | LPM-011, LPM-030 | In progress | Codex on `main` |
-| [LPM-032](tasks.md#lpm-032) | Offline ladder and structured text edits | LPM-012, LPM-030 | Ready | — |
+| [LPM-032](tasks.md#lpm-032) | Offline ladder and structured text edits | LPM-012, LPM-030 | In progress | Codex on `main` |
 | [LPM-033](tasks.md#lpm-033) | Staged `.ACD` and `.L5X` outputs | LPM-015, LPM-031, LPM-032 | Planned | — |
 | [LPM-034](tasks.md#lpm-034) | Logix verification and preservation checks | LPM-003, LPM-033 | Planned | — |
 | [LPM-035](tasks.md#lpm-035) | Local review, approval, and artifact finalization | LPM-030, LPM-034 | Planned | — |

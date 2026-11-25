@@ -14,6 +14,8 @@ Proposal tests verify the documentation-only preview and content identity throug
 
 Documentation-copy tests cover creation, replacement, and removal of existing component descriptions, exact preservation of unrelated XML bytes, staged artifact fingerprints, invalid encoding, changed source and selection during staging, and destination collisions. These are SDK-free L5X checks, not Studio 5000 import verification.
 
+Routine-documentation tests exercise same-named Ladder and Structured Text routines in separate programs through the MCP tools, rejection of ambiguous, protected, unsupported and missing routines, and byte-for-byte preservation of saved source, comments, and pending sections.
+
 Shared-selection tests launch the packaged sharing module and switch between same-named projects in an existing MCP session. They exercise refresh, missing and moved files, stale search pages, and failed selection validation.
 
 Custom Tools tests exercise installation, updates, and removal on disposable XML configurations, including repeated operations, backup contents, menu name conflicts, and an intervening file change. Use the [Windows menu walkthrough](docs/studio-5000-integration.md#install-send-current-project-to-agent) for desktop validation.

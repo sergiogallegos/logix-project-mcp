@@ -112,6 +112,12 @@ Added [`create_documentation_copy`](../mcp-contract.md#documentation-copy) for a
 
 The 28-test suite passed both the editable installation and the built wheel in an SDK-free Python 3.12.10 Windows environment (27 passed, one optional native test skipped in each run), and `pip check` passed. Synthetic full L5X tests covered case-insensitive scoped names, empty and removed descriptions, escaped and Unicode text, byte-for-byte preservation of unrelated XML, stale saves, selection changes, modified previews, unsupported encoding, and competing destinations. The source and existing destination files remained intact. No SDK write, Studio 5000 import, or live controller was exercised. The agreed documentation-only scope is complete; tag definition/value changes, renames and removals in the broader original LPM-031 brief are not implemented, so the task remains In progress.
 
+## 2026-11-25 · LPM-032 · In progress (routine documentation slice verified) · Codex on `main`
+
+Extended the version 1 documentation proposal target union with a program-qualified `routine` target for existing Ladder and Structured Text routines that have saved readable content. The same preview, identity validation, and documentation-copy workflow supports creation, replacement, or removal of their descriptions. Source-protected, encoded, ambiguous, missing, and unsupported routine targets are rejected. Routine creation and executable logic edits are not implemented.
+
+The 29-test suite passed both the editable package and the built wheel in a separate SDK-free Windows Python 3.12.10 environment (28 passed, one optional native test skipped); `pip check` passed. The synthetic revision 38.02 L5X stdio test used same-named RLL/ST routines in different programs, verified exact output bytes, and verified that existing rung and inline comments, routine sections including pending edits, and the source file were unchanged. A tampered target and an undeclared logic attribute were rejected. No native SDK editing or Studio 5000 import was exercised. The broader LPM-032 brief remains In progress.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.
