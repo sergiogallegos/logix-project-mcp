@@ -35,7 +35,7 @@ Follow the [agent workflow](README.md) and record acceptance evidence in the [ha
 | [LPM-023](tasks.md#lpm-023) | Open or import reviewed artifacts in Studio 5000 | LPM-022, LPM-035 | In progress (full L5X handoff) | Codex on `main` |
 | [LPM-040](tasks.md#lpm-040) | Failure recovery, file boundaries, and diagnostics | LPM-002, LPM-021, LPM-033 | In progress | Codex on `main` |
 | [LPM-041](tasks.md#lpm-041) | Large-project performance and reliability | LPM-013, LPM-014, LPM-016, LPM-040 | Done | Codex on `main` |
-| [LPM-042](tasks.md#lpm-042) | Packaging, clean installs, and release CI | LPM-001, LPM-022, LPM-035, LPM-040 | In progress | Codex on `main` |
+| [LPM-042](tasks.md#lpm-042) | Packaging, clean installs, and release CI | LPM-001, LPM-022, LPM-035, LPM-040 | Done | Codex on `main` |
 | [LPM-043](tasks.md#lpm-043) | End-to-end engineer acceptance | LPM-003, LPM-023, LPM-041, LPM-042 | Planned | — |
 | [LPM-044](tasks.md#lpm-044) | User documentation and support guide | LPM-042, LPM-043 | Planned | — |
 | [LPM-045](tasks.md#lpm-045) | Review and publish 1.0 | LPM-004, LPM-044 | Planned | — |

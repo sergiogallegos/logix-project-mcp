@@ -170,6 +170,18 @@ With Rockwell SDK 2.0.2, the revision 38.02 L5K with 8,192 tags opened in 52.76 
 
 LPM-042 is next in delivery order. Its full packaging and release checks still depend on LPM-035 and LPM-040, so no downstream task is newly Ready.
 
+## 2026-11-25 · LPM-042 · Done · Codex on `main`
+
+CI builds one universal wheel, retains it as the `python-wheel` artifact and installs that file into four fresh environments. The hosted Windows and Ubuntu jobs passed on Python 3.12 and 3.13. The stdio smoke test launches the installed server command. The README and build guide cover wheel setup, client configuration, upgrades and removal. [Hosted CI run and wheel](https://github.com/sergiogallegos/logix-project-mcp/actions/runs/45668135199) · [Reproduce the packaging checks](../../BUILD.md#test-the-distribution-wheel)
+
+On Windows 11, Python 3.12.10, a clean SDK-free environment upgraded from the earlier LPM-022 wheel. Both development builds report version 0.1.0, so this exercised same-version replacement. The shared selection survived the upgrade and uninstall, all five launchers were removed, and the unrelated Custom Tools entry survived removal of the sharing command. The helper setup ran against disposable XML. The suite passed 39 tests with two optional native checks skipped.
+
+In a second clean environment, the locally built wheel and Rockwell SDK 2.0.2 passed all 41 tests, including the revision 38.02 synthetic ACD read and SDK documentation L5X reopen with source hash checks. Hosted CI remains SDK-free. Packaging covers the currently implemented tools. The remaining native output and approval features stay on their own tasks.
+
+The wheel downloaded from the linked run had SHA-256 `6466ce0274529b2785378c3f8baafba10d616ca0a6523b0670b378dd0568d15d`. That artifact also passed a clean Windows SDK install, repeated reads of a synthetic revision 38.02 L5K with matching source hashes, and removal. This run passed 40 tests and skipped the separate documentation reopen check.
+
+LPM-043 is next in delivery order. Its full engineer acceptance run still depends on LPM-023's reviewed native and component handoff.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.
