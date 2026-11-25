@@ -39,11 +39,13 @@ See the [Rockwell SDK 2.02.00 requirements](https://compatibility.rockwellautoma
 
 ## Install
 
-Create a Python 3.12 environment and install the server. From PowerShell in the repository root, run:
+Download the `python-wheel` artifact from a successful GitHub Actions CI run and extract it to a folder named `dist`. From PowerShell in its parent directory, install that wheel into a dedicated environment:
 
 ```powershell
 py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -e .
+$wheel = (Get-Item .\dist\logix_project_mcp-*.whl).FullName
+.\.venv\Scripts\python.exe -m pip install $wheel
+.\.venv\Scripts\python.exe -m pip check
 ```
 
 For `.ACD` or `.L5K`, install the Rockwell wheel into the same environment. Adjust the wheel filename for your installation.
@@ -52,6 +54,8 @@ For `.ACD` or `.L5K`, install the Rockwell wheel into the same environment. Adju
 $sdk = Join-Path $env:PUBLIC 'Documents\Studio 5000\Logix Designer SDK\python\logix_designer_sdk-2.0.2-py3-none-any.whl'
 .\.venv\Scripts\python.exe -m pip install $sdk
 ```
+
+The wheel includes the Windows sharing helper and the `logix-project-mcp-menu` installer. Keep the environment at a stable path for the Studio menu and MCP client. For development from a checkout, use `python -m pip install -e .` in the activated environment. [Studio menu setup](docs/studio-5000-integration.md#install-send-current-project-to-agent) · [Upgrades and removal](BUILD.md#upgrade-or-remove-a-wheel-installation)
 
 ## Connect an agent
 

@@ -8,7 +8,24 @@ permissions:
   contents: read
 
 jobs:
+  wheel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      - run: python -m pip wheel --no-deps --wheel-dir dist .
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: python-wheel
+          path: dist/logix_project_mcp-*.whl
+          if-no-files-found: error
+
   offline:
+    needs: wheel
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     strategy:
@@ -22,6 +39,10 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ matrix.python }}
-      - run: python -m pip install .
-      - run: python -m pip check
-      - run: python -m unittest discover -s tests -v
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: python-wheel
+          path: dist
+      - name: Verify wheel in a clean environment
+        shell: bash
+        run: python scripts/verify_wheel.py dist/logix_project_mcp-*.whl

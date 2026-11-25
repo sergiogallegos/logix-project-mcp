@@ -1,6 +1,6 @@
 # Build and verify
 
-Create the environment described in [README.md](README.md#install) and activate it or invoke its Python executable. Install the package in editable mode while developing. CI installs the package from the checkout and runs the same offline checks on Windows and Ubuntu with Python 3.12 and 3.13.
+Create the environment described in [README.md](README.md#install) and activate it or invoke its Python executable. Install the package in editable mode while developing. CI builds one universal wheel and tests that artifact on Windows and Ubuntu with Python 3.12 and 3.13.
 
 ```sh
 python -m pip install -e .
@@ -47,3 +47,21 @@ Remove-Item Env:LOGIX_PROJECT_MCP_TEST_PROJECT
 The test inherits the launching PowerShell environment. Use [the diagnostic command](README.md#check-the-installation) to compare that setup with the reduced MCP client environment. Report the project revision, SDK wheel version, and the formats exercised. An SDK export run directly in Python checks a different entry point from the MCP smoke test. Record both outcomes when diagnosing a native failure.
 
 Follow the [offline export checks](docs/compatibility.md#verify-offline-export) to verify native format conversion and component import.
+
+## Test the distribution wheel
+
+Build from a checkout and pass the wheel to the same verifier that CI runs. The script creates a disposable virtual environment, exercises the installed commands outside the checkout, and runs the repository test suite with that environment's Python. The Windows jobs use a disposable Custom Tools XML file. The verifier also checks that the shared selection and unrelated menu entries survive package replacement and removal.
+
+```powershell
+python -m pip wheel --no-deps --wheel-dir dist .
+$wheel = (Get-Item .\dist\logix_project_mcp-*.whl).FullName
+python scripts/verify_wheel.py $wheel
+```
+
+Use a build directory containing one project wheel, or specify the exact filename. By default the upgrade check reinstalls the same build. Use `--previous-wheel` with a prior wheel containing the sharing and menu commands to exercise an upgrade between builds. For a local native check, set `LOGIX_PROJECT_MCP_TEST_PROJECT` to a synthetic ACD or L5K and add `--sdk-wheel` with the locally installed Rockwell wheel path. The hosted matrix exercises only the SDK-free installation.
+
+## Upgrade or remove a wheel installation
+
+Keep the same environment and selection-file path when updating the installed wheel. Run `python -m pip install --upgrade <wheel-path>` using the environment's Python. For a replacement development build with the same version number, add `--force-reinstall`. Restart the MCP client process to load the new code. The documented stdio JSON configuration and the Codex shared-selection configuration both work with the wheel environment. [Client configuration](README.md#connect-an-agent) · [Codex registration](docs/studio-5000-integration.md#connect-codex)
+
+To uninstall, first remove the managed Studio menu entry using the installed menu helper. Then run `python -m pip uninstall logix-project-mcp` in the same environment and remove the server registration from the MCP client where you added it. The selection JSON belongs to the engineer and can be reused on reinstall. [Menu removal](docs/studio-5000-integration.md#remove-the-menu-entry)

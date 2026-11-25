@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 import sys
+import sysconfig
 import unittest
 from datetime import timedelta
 from importlib.util import find_spec
@@ -144,10 +145,10 @@ class StdioTests(unittest.IsolatedAsyncioTestCase):
         with TemporaryDirectory() as directory:
             project = Path(directory) / "Sample.L5X"
             project.write_bytes(PROJECT)
-            server = StdioServerParameters(
-                command=sys.executable,
-                args=["-m", "logix_project_mcp.server", "--project", str(project)],
+            launcher = Path(sysconfig.get_path("scripts")) / (
+                "logix-project-mcp.exe" if os.name == "nt" else "logix-project-mcp"
             )
+            server = StdioServerParameters(command=str(launcher), args=["--project", str(project)])
 
             async with stdio_client(server) as (reader, writer), ClientSession(reader, writer) as client:
                 self.assertIsNotNone((await client.initialize()).capabilities.tools)
