@@ -13,7 +13,8 @@ from xml.etree import ElementTree
 
 TESTS = Path(__file__).resolve().parents[1] / "tests"
 COMMANDS = ("logix-project-mcp", "logix-project-mcp-doctor", "logix-project-mcp-menu",
-            "logix-project-mcp-review", "logix-project-mcp-review-tag", "logix-project-mcp-share")
+            "logix-project-mcp-review", "logix-project-mcp-review-tag",
+            "logix-project-mcp-review-routine", "logix-project-mcp-share")
 
 
 def verify(folder: Path, wheel: Path, previous: Path | None, sdk: Path | None) -> None:
@@ -23,6 +24,7 @@ def verify(folder: Path, wheel: Path, previous: Path | None, sdk: Path | None) -
     if not sdk:
         env.pop("LOGIX_PROJECT_MCP_TEST_PROJECT", None)
         env.pop("LOGIX_PROJECT_MCP_TEST_DOCUMENTATION_L5X", None)
+        env.pop("LOGIX_PROJECT_MCP_TEST_ROUTINE_L5X", None)
     install = folder / "Python Environment"
     venv.EnvBuilder(with_pip=True).create(install)
     windows = os.name == "nt"

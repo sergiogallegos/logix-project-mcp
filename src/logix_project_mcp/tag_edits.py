@@ -1,26 +1,20 @@
 """Review a single offline edit to a private scalar DINT tag in a full L5X."""
 
-import argparse
-import asyncio
-import json
-import os
 import re
-import sys
 from collections.abc import Callable
 from hashlib import sha256
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from typing import Annotated, Literal, NotRequired
 from xml.etree.ElementTree import Element
 
-from pydantic import Field, TypeAdapter
+from pydantic import Field
 
 from .documentation import ElementSpan, description_spans
-from .export import validate_filename
+from .edit_review import EditReceipt, publish_reviewed, run_review_cli
 from .inventory import has_protection
-from .project import ProjectReadError, ProjectSnapshot, controller_from_l5x, parse_l5x_bytes, snapshot_source
+from .project import ProjectReadError, ProjectSnapshot, controller_from_l5x, parse_l5x_bytes
 from .proposals import Digest, Name, ProposalSource, StrictRecord, canonical_json, check_documentation_boundary, identity, unique_named
-from .selection import ProjectSelection, read_selection, validate_project_path
+from .selection import ProjectSelection
 
 
 Identifier = Annotated[str, Field(max_length=40, pattern=r"^([A-Za-z][A-Za-z0-9]*|_[A-Za-z0-9]+)(_[A-Za-z0-9]+)*$")]
@@ -65,10 +59,7 @@ class TagPreview(StrictRecord):
     approval_id: Digest
 
 
-class TagReceipt(StrictRecord):
-    proposal: TagPreview
-    path: str
-    artifact_sha256: Digest
+TagReceipt = EditReceipt[TagPreview]
 
 
 def unsupported(message: str) -> ProjectReadError:
@@ -119,7 +110,7 @@ def read_state(tag: Element) -> TagState:
     return {"name": tag.attrib["Name"], "value": next(iter(values.values())), "description": tag.findtext("Description")}
 
 
-def require_unused(root: Element, name: str, declaration: Element | None) -> None:
+def require_unused(root: Element, name: str, declaration: Element | None, *, operand: Element | None = None) -> None:
     # Scan unknown XML fields too. An unresolved use could bind to a new declaration.
     token = re.compile(rf"(?<!\w){re.escape(name)}(?!\w)", re.ASCII | re.IGNORECASE)
     for node in root.iter():
@@ -128,16 +119,20 @@ def require_unused(root: Element, name: str, declaration: Element | None) -> Non
                 continue
             if token.search(value):
                 raise unsupported(f"{name!r} has a possible reference or name collision in the saved export.")
-        if (node.tag != "Description" and token.search(node.text or "")) or token.search(node.tail or ""):
+        if (node is not operand and node.tag != "Description" and token.search(node.text or "")) or token.search(node.tail or ""):
             raise unsupported(f"{name!r} occurs in saved project content.")
 
 
-def preview_tag(selection: ProjectSelection, snapshot: ProjectSnapshot, change: TagChange) -> TagPreview:
+def check_edit_source(selection: ProjectSelection, root: Element) -> None:
     if selection.path.suffix.lower() != ".l5x":
-        raise unsupported("Select a full UTF-8 L5X export for tag edits.")
-    check_documentation_boundary(snapshot.root)
-    if has_protection(snapshot.root) or any(n.get("IsEncrypted", "").lower() in ("true", "1") for n in snapshot.root.iter()):
-        raise unsupported("Opaque project content prevents checking tag references.")
+        raise unsupported("Select a full UTF-8 L5X export for this edit.")
+    check_documentation_boundary(root)
+    if has_protection(root) or any(n.get("IsEncrypted", "").lower() in ("true", "1") for n in root.iter()):
+        raise unsupported("Opaque project content prevents checking references.")
+
+
+def preview_tag(selection: ProjectSelection, snapshot: ProjectSnapshot, change: TagChange) -> TagPreview:
+    check_edit_source(selection, snapshot.root)
     container = tag_container(snapshot.controller, change)
     name = change["name"]
     op = change["operation"]
@@ -231,62 +226,11 @@ def build_copy(data: bytes, selection: ProjectSelection, reviewed: TagPreview, a
 
 async def review_copy(current: Callable[[], ProjectSelection], proposal: TagPreview, approval_id: str,
                       output: Path, confirm: Callable[[TagReceipt], bool]) -> TagReceipt | None:
-    selection = current()
-    validate_filename(output.name)
-    if (output.suffix.lower() != ".l5x" or re.search(r'[<>:"/\\|?*\x00-\x1f]', output.name)
-            or os.path.lexists(output)):
-        raise unsupported("Choose a new .L5X output filename.")
-    with TemporaryDirectory(dir=output.parent, prefix=".logix-tag-") as temporary:
-        folder = Path(temporary)
-        source = folder / "source.L5X"
-        original = await snapshot_source(selection.path, source)
-        data = build_copy(source.read_bytes(), selection, proposal, approval_id)
-        staged = folder / "staged.L5X"
-        staged.write_bytes(data)
-        receipt = {"proposal": proposal, "path": str(output), "artifact_sha256": sha256(data).hexdigest()}
-        if not confirm(receipt):
-            return None
-        if await snapshot_source(selection.path, folder / "latest.L5X") != original or current() != selection:
-            raise unsupported("The source or selection changed during review.")
-        if staged.read_bytes() != data:
-            raise unsupported("The staged artifact changed during review.")
-        if os.name == "nt":
-            os.rename(staged, output)
-        else:
-            os.link(staged, output)
-        return receipt
-
-
-def confirm_tag(receipt: TagReceipt) -> bool:
-    print(json.dumps(receipt, indent=2, ensure_ascii=True), file=sys.stderr)
-    print("Type APPROVE to publish this new offline L5X copy: ", file=sys.stderr, end="", flush=True)
-    return sys.stdin.readline().strip() == "APPROVE"
+    return await publish_reviewed(current, proposal, approval_id, output, confirm, build_copy)
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    source = parser.add_mutually_exclusive_group(required=True)
-    source.add_argument("--project", type=Path)
-    source.add_argument("--selection-file", type=Path)
-    parser.add_argument("--proposal", required=True, type=Path)
-    parser.add_argument("--approval-id", required=True)
-    parser.add_argument("output", type=Path)
-    args = parser.parse_args()
-    if not sys.stdin.isatty():
-        parser.error("Review requires a local interactive terminal.")
-    try:
-        if args.project:
-            fixed = ProjectSelection(validate_project_path(args.project))
-            current = lambda: fixed
-        else:
-            current = lambda: read_selection(args.selection_file)
-        proposal = TypeAdapter(TagPreview).validate_json(args.proposal.read_bytes(), strict=True)
-        result = asyncio.run(review_copy(current, proposal, args.approval_id, args.output.absolute(), confirm_tag))
-        if result is None:
-            raise SystemExit(2)
-        print(json.dumps(result))
-    except (ProjectReadError, OSError, ValueError) as exc:
-        parser.exit(1, f"{exc}\n")
+    run_review_cli(__doc__, TagPreview, build_copy)
 
 
 if __name__ == "__main__":

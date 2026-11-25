@@ -218,6 +218,14 @@ On Windows with Python 3.12.10 and SDK wheel 2.0.2, the SDK reopened a synthetic
 
 LPM-031 covers this supported DINT subset and the earlier description operations. Other tag types, access modes, reference rewriting and direct native output are outside its verified scope. LPM-032 is the next unfinished implementation task.
 
+## 2026-11-25 · LPM-032 · Done for supported assignments · Codex on `main`
+
+Added `preview_routine_edit` and a local interactive publisher for uncalled Ladder and Structured Text routines. Creation adds one literal assignment to an existing private program DINT. Update changes its integer literal while preserving the destination, comments and surrounding XML. The full L5X copy uses the same source, selection, approval and destination checks as the tag editor. [Routine scope and import procedure](../mcp-contract.md#offline-routine-edits)
+
+The stdio tests exercised both languages and operations, readable previews, invalid syntax, stale source, collisions, protected content, referenced routines, missing or externally visible operands and pending edits. Byte comparisons checked preservation of rung and inline comments. The revision 35.00 mnemonic check used synthetic XML. On Windows with Python 3.12.10 and Rockwell SDK 2.0.2, the SDK reopened and re-exported a synthetic revision 38.02 project containing both updated routines and returned the expected assignments.
+
+In a clean wheel installation, Codex acted as test operator at the local review prompt. MCP read back `MainProgram.McpReviewedTrial` with the approved ST assignment. The source and resulting L5X hashes matched the preview and receipt. This run verified saved-file behavior; controller execution and a Studio project build were outside the run. LPM-033, staged native and component outputs, is the next unfinished implementation task.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.

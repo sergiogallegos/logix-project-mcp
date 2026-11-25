@@ -42,6 +42,7 @@ from .proposals import Operations, Proposal, ProposalValidation, create_proposal
 from .search import ProjectSearch, SearchKind, SearchMatch, SymbolKind, page
 from .selection import ProjectSelection, SelectionId, SelectionResult, read_selection, validate_project_path
 from .tag_edits import TagChange, TagPreview, preview_tag
+from .routine_edits import RoutineChange, RoutinePreview, preview_routine
 
 READ_ONLY = ToolAnnotations(readOnlyHint=True, idempotentHint=True, openWorldHint=False)
 EXPORT_WRITE = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False)
@@ -123,6 +124,12 @@ class TagPreviewArguments(ToolArguments):
     expected_source_sha256: SourceHash
     expected_selection_id: NotRequired[SelectionId | None]
     change: TagChange
+
+
+class RoutinePreviewArguments(ToolArguments):
+    expected_source_sha256: SourceHash
+    expected_selection_id: NotRequired[SelectionId | None]
+    change: RoutineChange
 
 
 class DocumentationCopyArguments(ValidateProposalArguments):
@@ -390,18 +397,27 @@ def create_server(
             raise ProjectReadError("project_changed", "Inspect the latest saved project before creating a proposal.")
         return create_proposal(selection, snapshot, operations)
 
-    async def preview_tag_edit(expected_source_sha256: str, change: TagChange, expected_selection_id: str | None = None) -> TagPreview:
-        """Preview an offline private decimal DINT declaration change for local review."""
+    async def edit_snapshot(expected_source_sha256: str, expected_selection_id: str | None):
         async with project_read_lock:
             selection = selected()
             if selection.path.suffix.lower() != ".l5x":
-                raise ProjectReadError("invalid_proposal", "Export and select a full L5X before previewing a tag edit.")
+                raise ProjectReadError("invalid_proposal", "Export and select a full L5X before previewing this edit.")
             if selection.selection_id != expected_selection_id:
-                raise ProjectReadError("selection_changed", "Inspect the current shared selection before previewing a tag edit.")
+                raise ProjectReadError("selection_changed", "Inspect the current shared selection before previewing an edit.")
             snapshot = await read_project(selection.path)
         if snapshot.source_sha256 != expected_source_sha256:
-            raise ProjectReadError("project_changed", "Inspect the current saved bytes before previewing a tag edit.")
+            raise ProjectReadError("project_changed", "Inspect the current saved bytes before previewing an edit.")
+        return selection, snapshot
+
+    async def preview_tag_edit(expected_source_sha256: str, change: TagChange, expected_selection_id: str | None = None) -> TagPreview:
+        """Preview an offline private decimal DINT declaration change for local review."""
+        selection, snapshot = await edit_snapshot(expected_source_sha256, expected_selection_id)
         return await asyncio.to_thread(preview_tag, selection, snapshot, change)
+
+    async def preview_routine_edit(expected_source_sha256: str, change: RoutineChange, expected_selection_id: str | None = None) -> RoutinePreview:
+        """Preview creation or a literal update of an uncalled Ladder or ST assignment routine."""
+        selection, snapshot = await edit_snapshot(expected_source_sha256, expected_selection_id)
+        return await asyncio.to_thread(preview_routine, selection, snapshot, change)
 
     async def validate_change_proposal(proposal: Proposal, expected_approval_id: str) -> ProposalValidation:
         """Check a previously reviewed documentation preview against its identity and current saved source. No edits are applied."""
@@ -449,6 +465,7 @@ def create_server(
         (find_references, ReferenceArguments, SearchResult),
         (preview_change_proposal, PreviewProposalArguments, Proposal),
         (preview_tag_edit, TagPreviewArguments, TagPreview),
+        (preview_routine_edit, RoutinePreviewArguments, RoutinePreview),
         (validate_change_proposal, ValidateProposalArguments, ProposalValidation),
         (get_capabilities, ToolArguments, Capabilities),
     )

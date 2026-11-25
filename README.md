@@ -20,6 +20,8 @@ Each inspection tool takes a fresh snapshot of the selected saved file. Its succ
 
 For an unused, private decimal DINT in controller or program scope, preview creation, a saved value change, rename, or removal through MCP. The installed local review command displays the before/after values and writes a new full L5X on approval. [Offline tag edit walkthrough](docs/mcp-contract.md#private-dint-tag-edits)
 
+You can also create an uncalled Ladder or Structured Text routine that assigns one integer literal to a private program DINT. For an existing routine of that form, preview a new literal and approve a separate full L5X copy. [Offline routine edit walkthrough](docs/mcp-contract.md#offline-routine-edits)
+
 Native inspections reuse a validated SDK export on subsequent calls in the same MCP session when the selected path and source SHA-256 match. A new save with changed bytes triggers a new export. The cache is bounded and held in memory.
 
 For measured startup, search, comparison and native read times, see the [inspection performance report](docs/performance.md). It includes memory targets and commands to repeat the measurements on your host.
@@ -101,6 +103,7 @@ Add a local stdio server in your MCP client. Replace both paths in the `mcpServe
 | `search_project` | Scoped declarations, comments, and resolved references matching a query |
 | `find_references` | Locations that refer to a specific declaration, including through alias chains |
 | `preview_tag_edit` | Source-bound before/after preview of one private DINT tag edit for local approval |
+| `preview_routine_edit` | Program-scoped before/after source for one Ladder or Structured Text assignment |
 | `preview_change_proposal` | Typed, source-bound before-and-after previews for controller, program, tag, and Ladder/ST routine descriptions, with approval identity |
 | `validate_change_proposal` | Check the reviewed preview and identity against the current saved project |
 | `create_documentation_copy` | A new UTF-8 full `.L5X` copy containing reviewed description changes only, when export is enabled |

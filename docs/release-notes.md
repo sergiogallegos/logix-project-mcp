@@ -2,6 +2,8 @@
 
 ### Changes since the verified baseline
 
+Development builds containing `preview_routine_edit` also support uncalled, single-assignment Ladder and Structured Text routines. Updates change one literal while preserving the destination and comments. [Routine review procedure](mcp-contract.md#offline-routine-edits)
+
 Development builds containing `preview_tag_edit` support reviewed create, value update, rename and removal for private decimal DINT tags in a full UTF-8 L5X. Use the local `logix-project-mcp-review-tag` command from the same build. [Supported tags and review procedure](mcp-contract.md#private-dint-tag-edits)
 
 ### Baseline for the documentation walkthrough

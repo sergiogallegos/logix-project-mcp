@@ -2,7 +2,7 @@
 
 **1.0 outcome.** An engineer can select the project they have open in Studio 5000, share its latest saved `.ACD` with an MCP client, inspect and compare the project, review a proposed offline edit, and reopen a validated `.ACD` copy or import the reviewed `.L5X` component into Studio 5000. The server also supports the documented `.L5K` and `.L5X` workflows.
 
-**Current progress.** LPM-031 supports reviewed offline edits to private scalar DINT tags in a full L5X. The documentation workflow also supports typed proposals, new UTF-8 full L5X copies, artifact verification, and local interactive approval with a sidecar. Other tag types, executable routine edits, direct native output and vendor builds remain open. [Tag edit contract](../mcp-contract.md#private-dint-tag-edits) · [Review and verification evidence](handoff.md)
+**Current progress.** LPM-031 and LPM-032 support reviewed offline edits to private scalar DINT tags and single-assignment Ladder or Structured Text routines in full L5X copies. The documentation workflow also supports typed proposals, artifact verification, and local approval with a sidecar. Direct reviewed native output, reviewed component output and vendor builds remain open. [Supported routine edits](../mcp-contract.md#offline-routine-edits) · [Review and verification evidence](handoff.md)
 
 Follow the [agent workflow](README.md) and record acceptance evidence in the [handoff log](handoff.md). Each task links to its deliverable and verification criteria.
 
@@ -28,7 +28,7 @@ Follow the [agent workflow](README.md) and record acceptance evidence in the [ha
 | [LPM-024](tasks.md#lpm-024) | Direct Codex MCP connection and persistent selection | LPM-021, LPM-022 | Done | Codex on `main` |
 | [LPM-030](tasks.md#lpm-030) | Typed offline change proposals | LPM-010, LPM-014 | Done | Codex on `main` |
 | [LPM-031](tasks.md#lpm-031) | Offline tag and metadata edits | LPM-011, LPM-030 | Done (private scalar DINT and documented descriptions) | Codex on `main` |
-| [LPM-032](tasks.md#lpm-032) | Offline ladder and structured text edits | LPM-012, LPM-030 | In progress | Codex on `main` |
+| [LPM-032](tasks.md#lpm-032) | Offline ladder and structured text edits | LPM-012, LPM-030 | Done (private DINT literal assignments) | Codex on `main` |
 | [LPM-033](tasks.md#lpm-033) | Staged `.ACD` and `.L5X` outputs | LPM-015, LPM-031, LPM-032 | In progress | Codex on `main` |
 | [LPM-034](tasks.md#lpm-034) | Logix verification and preservation checks | LPM-003, LPM-033 | In progress | Codex on `main` |
 | [LPM-035](tasks.md#lpm-035) | Local review, approval, and artifact finalization | LPM-030, LPM-034 | In progress | Codex on `main` |

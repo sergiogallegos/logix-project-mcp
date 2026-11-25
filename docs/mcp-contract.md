@@ -16,6 +16,7 @@ Call `tools/list` to discover the JSON Schema for each tool's arguments and succ
 | `preview_change_proposal` | Required `expected_source_sha256`, `operations`, and in shared mode `expected_selection_id` | [Typed documentation preview](#offline-change-proposals), source identity, and `approval_id` |
 | `validate_change_proposal` | Required `proposal`, `expected_approval_id` | `valid: true`, source identity, and checked `approval_id` |
 | `preview_tag_edit` | Required `expected_source_sha256`, `change`, and in shared mode `expected_selection_id` | Source identity, change, tag state before and after, data type and `approval_id` for [local tag review](#private-dint-tag-edits) |
+| `preview_routine_edit` | Required `expected_source_sha256`, `change`, and in shared mode `expected_selection_id` | Source identity, change, qualified destination tag, before/after instruction and `approval_id` for [local routine review](#offline-routine-edits) |
 | `create_documentation_copy` | Required `proposal`, `expected_approval_id`, and new `.L5X` `filename` when an export directory is configured | [Documentation-only artifact](#documentation-copy), source identity, approval identity, and artifact SHA-256 |
 | `verify_documentation_copy` | Required `proposal`, `expected_approval_id`, existing `.L5X` `filename`, and `expected_artifact_sha256` when an export directory is configured | Artifact identity and `valid: true`, `verification: "exact_documentation_copy"`, `vendor_verification: "not_performed"` |
 | `compare_projects` | Optional `scope` when a candidate was [selected at launch](#project-comparison) | `before`, `after`, scoped `changes`, and `protected_components` |
@@ -157,6 +158,28 @@ $approvalId = Read-Host 'Approval ID retained from preview'
 ```
 
 The command rebuilds the preview against the saved source, stages the change, reparses the result, and displays the exact output path and hash. Enter `APPROVE` to publish the copy. A decline exits with code 2. A competing destination, changed source, or changed shared selection prevents publication. Retain the successful JSON receipt for its proposal, path and artifact SHA-256. To edit the resulting tag again, select the new copy and obtain a new preview.
+
+## Offline routine edits
+
+Select a saved full UTF-8 L5X with an existing private decimal DINT in the destination program. Use the source hash from `get_project` and the current selection ID in shared mode. Pass one of the following `change` objects to `preview_routine_edit`. Use `create` for a new routine or `update` to change the integer literal in an existing routine of the same form.
+
+| Language | Example for a revision 38.02 project |
+| --- | --- |
+| Ladder | `{"operation":"create","program":"MainProgram","routine":"TrialMove","language":"RLL","statement":"MOVE(17,ScratchCount);"}` |
+| Structured Text | `{"operation":"update","program":"MainProgram","routine":"TrialAssign","language":"ST","statement":"ScratchCount := -8;"}` |
+
+The Ladder form uses a single ordinary rung. Use `MOV` for software revisions before 36 and `MOVE` from 36 onward. The ST form uses one assignment; the saved routine can include blank lines and `//` comments. Values must fit a signed 32-bit integer. The destination must be an existing private, nonconstant, local DINT of the [supported tag form](#private-dint-tag-edits). [Rockwell move mnemonic and ST equivalent](https://www.rockwellautomation.com/en-be/docs/studio-5000-logix-designer/37-00/contents-ditamap/instruction-set/move-logical-instructions/move--move-.html)
+
+Creation inserts the routine in the named program's `Routines` collection. It adds no calls, scheduling, tags or imported dependencies. The saved-reference check rejects entry points, possible callers, duplicate names and other uses of the destination tag. The check scans across scopes and can flag an unrelated match. Updates retain the language and destination, changing only the literal's bytes. Rung comments, ST comments and the surrounding XML keep their original bytes. Protected content, recognized safety markers and pending routine sections are outside this workflow.
+
+Save the preview's exact `structuredContent` as JSON. Review the program, routine, destination and before/after text, then retain its `approval_id`. From an interactive terminal run the installed command against the same source (or supply the original `--selection-file`) and choose a new L5X path.
+
+```powershell
+$approvalId = Read-Host 'Approval ID retained from preview'
+.\.venv\Scripts\logix-project-mcp-review-routine.exe --project 'C:\Samples\Baseline.L5X' --proposal routine-proposal.json --approval-id $approvalId 'C:\Reviews\RoutineEdit.L5X'
+```
+
+The command reconstructs the preview, reparses the staged instruction, then displays the proposed copy's path and hash. Enter `APPROVE` to publish it. Declining exits with code 2. A changed source, selection, stage, or occupied destination prevents publication. The resulting artifact is a full project: in Studio, open it offline and choose a separate scratch ACD in **Save Imported Project As**. The local receipt identifies the checked L5X bytes. Vendor import is a separate step.
 
 ## Documentation copy
 

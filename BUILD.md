@@ -28,6 +28,8 @@ The same tests exercise the read-only `--check` command with a retained review I
 
 Routine-documentation tests exercise same-named Ladder and Structured Text routines in separate programs through the MCP tools, rejection of ambiguous, protected, unsupported and missing routines, and byte-for-byte preservation of saved source, comments, and pending sections.
 
+Routine-edit tests preview creation and literal updates over stdio, validate schemas, and compare the staged source with its preview. For vendor readback, set `LOGIX_PROJECT_MCP_TEST_ROUTINE_L5X` to a synthetic revision 38.02 full L5X with a standard `MainProgram` containing `Tags` and `Routines` collections. The optional SDK test creates private scratch tags, creates and updates a routine in each language, then reopens the combined copy and checks both saved instructions.
+
 Shared-selection tests launch the packaged sharing module and switch between same-named projects in an existing MCP session. They exercise refresh, missing and moved files, stale search pages, and failed selection validation.
 
 Custom Tools tests exercise installation, updates, and removal on disposable XML configurations, including repeated operations, backup contents, menu name conflicts, and an intervening file change. Use the [Windows menu walkthrough](docs/studio-5000-integration.md#install-send-current-project-to-agent) for desktop validation.
