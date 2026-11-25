@@ -198,6 +198,16 @@ All 42 tests passed with the SDK and both optional samples configured. The SDK-f
 
 LPM-043 remains in progress pending LPM-023's reviewed native output and component handoff. Engineer sign-off is outstanding. LPM-044 is next in delivery order once acceptance is complete.
 
+## 2026-11-25 · LPM-044 · In progress · Codex on `main`
+
+Added a first-read quick start, a format-by-operation matrix, instructions for changing a description, troubleshooting and development release notes. The notes identify the tested commit, CI artifact and wheel hash. The desktop import instructions now use the simple ACD filename that passed the LPM-043 run. [Quick start](../../README.md#quick-start) · [Operator guide](../support.md) · [Development notes](../release-notes.md)
+
+Walked through the setup on Windows 11 build 26200 with Python 3.12.10. Installed the hosted wheel from commit `532d8df` in two fresh virtual environments using cached dependency wheels. Both passed `pip check`. With the SDK-free environment, the doctor opened Rockwell's `DayOfWeek.L5X` at revision 17.00. A stdio client using the README's configuration read the saved hash and the Ladder routine `MainProgram.DayOfWeek`. A shared-selection client first returned `selection_required`, then read the same hash and routine after the installed helper shared the sample.
+
+The SDK-free doctor identified the missing Rockwell wheel when given a native sample. With SDK wheel 2.0.2 installed, the doctor opened a synthetic 38.02 ACD in both inherited and reduced launch environments and a 38.02 L5K in the inherited environment. A separate synthetic L5X run recovered from a stale proposal, staged a routine description, passed local review with Codex as test operator, and checked the artifact and source hashes on readback. The desktop menu and Studio import evidence comes from LPM-022 and LPM-043. This walkthrough used the installed workstation and left its Studio menu and persistent client registration alone.
+
+Documentation for the current development wheel is ready. LPM-044 remains open for the final format matrix and release notes after LPM-043 engineer acceptance and the reviewed native/component handoff. LPM-045 publication remains planned.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.

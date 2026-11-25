@@ -8,6 +8,8 @@
 
 A local MCP server for saved Rockwell Studio 5000 Logix Designer projects. An agent can inspect controller metadata, tags, and routines, compare saved projects, and create offline exports when you enable export.
 
+Start with the [first project read](#quick-start) to check your installation. For an existing setup, see the [operator and troubleshooting guide](docs/support.md) or the [0.1.0 development notes](docs/release-notes.md).
+
 | Format | How the server reads it |
 | --- | --- |
 | `.ACD` | Opens a temporary copy with the Rockwell SDK and inspects its `.L5X` export |
@@ -57,6 +59,20 @@ $sdk = Join-Path $env:PUBLIC 'Documents\Studio 5000\Logix Designer SDK\python\lo
 
 The wheel includes the Windows sharing helper and the `logix-project-mcp-menu` installer. Keep the environment at a stable path for the Studio menu and MCP client. For development from a checkout, use `python -m pip install -e .` in the activated environment. [Studio menu setup](docs/studio-5000-integration.md#install-send-current-project-to-agent) · [Upgrades and removal](BUILD.md#upgrade-or-remove-a-wheel-installation)
 
+## Quick start
+
+1. Install the wheel in a dedicated environment using the [installation commands](#install). A full project L5X export works without Studio or the Rockwell SDK. For a saved ACD or L5K, also complete the Windows SDK and license setup under [Requirements](#requirements).
+2. In PowerShell, set `$sample` to an existing full project export and run the installed diagnostic. The example uses the optional Rockwell sample pack. If you have your own full L5X, substitute its absolute path.
+
+   ```powershell
+   $sample = Join-Path $env:PUBLIC 'Documents\Studio 5000\Samples\DayOfWeek.L5X'
+   .\.venv\Scripts\logix-project-mcp-doctor.exe --project $sample
+   Get-FileHash -Algorithm SHA256 -LiteralPath $sample
+   ```
+
+   Look for `[PASS] MCP SDK-free launch` and the project software revision. For the native path, pass the saved ACD or L5K to the same command and look for `[PASS] MCP inherited launch`.
+3. Configure your [stdio client](#connect-an-agent) with the environment's Python and the absolute sample path, then start the connection. Ask it to call `get_project` and show `controller`, `software_revision`, `programs`, and `source_sha256`. Compare the hash with the PowerShell result, ignoring letter case. Pick a program and routine from the returned tree and ask it to call `read_routine` with those names. For a selection that follows your Studio menu actions, use the [shared-selection setup](#share-a-project-from-windows).
+
 ## Connect an agent
 
 Add a local stdio server in your MCP client. Replace both paths in the `mcpServers` example with the absolute paths on your machine. For `.ACD` or `.L5K` on a standard 64-bit Windows setup, forward the value of `$env:ProgramFiles` from the Windows session where the SDK works. A client with full environment inheritance can use that existing value.
@@ -66,7 +82,7 @@ Add a local stdio server in your MCP client. Replace both paths in the `mcpServe
   "mcpServers": {
     "logix-project-mcp": {
       "command": "C:/path/to/logix-project-mcp/.venv/Scripts/python.exe",
-      "args": ["-m", "logix_project_mcp.server", "--project", "C:/path/to/MyProject.ACD"],
+      "args": ["-m", "logix_project_mcp.server", "--project", "C:/path/to/Sample.L5X"],
       "env": { "ProgramFiles": "C:\\Program Files" }
     }
   }

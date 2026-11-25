@@ -37,7 +37,7 @@ Follow the [agent workflow](README.md) and record acceptance evidence in the [ha
 | [LPM-041](tasks.md#lpm-041) | Large-project performance and reliability | LPM-013, LPM-014, LPM-016, LPM-040 | Done | Codex on `main` |
 | [LPM-042](tasks.md#lpm-042) | Packaging, clean installs, and release CI | LPM-001, LPM-022, LPM-035, LPM-040 | Done | Codex on `main` |
 | [LPM-043](tasks.md#lpm-043) | End-to-end engineer acceptance | LPM-003, LPM-023, LPM-041, LPM-042 | In progress (full L5X documentation workflow) | Codex on `main` |
-| [LPM-044](tasks.md#lpm-044) | User documentation and support guide | LPM-042, LPM-043 | Planned | — |
+| [LPM-044](tasks.md#lpm-044) | User documentation and support guide | LPM-042, LPM-043 | In progress (0.1.0 development guide verified) | Codex on `main` |
 | [LPM-045](tasks.md#lpm-045) | Review and publish 1.0 | LPM-004, LPM-044 | Planned | — |
 | [LPM-050](tasks.md#lpm-050) | Read-only diagnostics feasibility | LPM-016, LPM-024 | Done | Codex on `main` |
 

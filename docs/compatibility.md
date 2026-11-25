@@ -1,6 +1,14 @@
 # Format and revision compatibility
 
-This matrix covers offline inspection and export through MCP stdio. Save changes in Studio 5000 before inspecting or exporting a project. The [product task board](agents/board.md) tracks the Studio 5000 Tools menu and offline editing workflows.
+Save changes in Studio 5000 before inspecting or exporting a project. The menu shares the saved path from the window where you invoke it. Pending changes first become visible to MCP after Save. [Observed desktop behavior](studio-5000-integration.md#observed-desktop-behavior)
+
+| Selected input | Read, compare and preview descriptions | Export | Create a reviewed documentation copy |
+| --- | --- | --- | --- |
+| Full project L5X | SDK-free | Full L5X byte copy without SDK. Format conversion and component export require the Windows SDK. | Stage and verify a separate full UTF-8 L5X from a full UTF-8 L5X source. |
+| Saved ACD or L5K | Windows with the licensed SDK and matching Studio revision | Full L5X, full L5K or a supported component L5X | Export a full L5X, select that file, then create a fresh proposal against it. |
+| Component L5X | Project selection requires a full controller project | Supported as an export destination for selected components | Local review handles full project L5X artifacts only. |
+
+Supported edits change descriptions on existing controllers, programs, scoped tags, and readable Ladder or Structured Text routines. Direct reviewed ACD output, reviewed component output, tag definition or value edits, and executable logic edits remain open. [Supported operations](mcp-contract.md#offline-change-proposals) · [Recorded Studio import and readback](agents/handoff.md#2026-11-25--lpm-043--in-progress--codex-on-main)
 
 ## Verified reads
 
