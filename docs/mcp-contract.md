@@ -16,6 +16,7 @@ Call `tools/list` to discover the JSON Schema for each tool's arguments and succ
 | `preview_change_proposal` | Required `expected_source_sha256`, `operations`, and in shared mode `expected_selection_id` | [Typed documentation preview](#offline-change-proposals), source identity, and `approval_id` |
 | `validate_change_proposal` | Required `proposal`, `expected_approval_id` | `valid: true`, source identity, and checked `approval_id` |
 | `create_documentation_copy` | Required `proposal`, `expected_approval_id`, and new `.L5X` `filename` when an export directory is configured | [Documentation-only artifact](#documentation-copy), source identity, approval identity, and artifact SHA-256 |
+| `verify_documentation_copy` | Required `proposal`, `expected_approval_id`, existing `.L5X` `filename`, and `expected_artifact_sha256` when an export directory is configured | Artifact identity and `valid: true`, `verification: "exact_documentation_copy"` |
 | `compare_projects` | Optional `scope` when a candidate was [selected at launch](#project-comparison) | `before`, `after`, scoped `changes`, and `protected_components` |
 | `export_project` | Required `filename` and optional `component` when an [export directory](#offline-export) was selected at launch | `path`, `format`, `component`, and `source_sha256` |
 
@@ -138,6 +139,10 @@ The tool reparses the staged result and checks each description against the revi
 
 This is an SDK-free documentation-only workflow. It supports creating, replacing, and removing descriptions of existing controllers, programs, scoped tags, and readable Ladder or Structured Text routines. Rung comments, inline ST comments, online-edit sections, routine dependencies and executable content remain unchanged. Native ACD/L5K input, non-UTF-8 L5X, changing tag declarations or values, creating routines, and modifying routine logic are not supported. The staged XML and preservation checks do not constitute Studio 5000 import or project verification.
 
+Retain the proposal, reviewed approval identity, and the creation result's `artifact_sha256` independently. To check an existing output later, call the read-only `verify_documentation_copy` with those values and the artifact's basename in the configured export directory. The tool makes verified temporary copies of the saved source and artifact, checks the retained digest, reconstructs the expected documentation output from the reviewed proposal, and compares the entire artifact byte for byte. It checks both files and the selection again before returning. A new digest for an altered artifact cannot make it match the original reviewed output. Missing files, stale sources, changed selections, modified proposals, and altered artifacts fail without changing the source or artifact. Success provides `valid: true` and `verification: "exact_documentation_copy"` alongside the existing artifact identity fields.
+
+This confirms exact correspondence to the supported documentation proposal as of the verification snapshots. It is not proof of human approval, a vendor build or import check, or a guarantee that an external process cannot modify the files after verification.
+
 ## Offline export
 
 Add `--export-dir` and an existing directory to the launch arguments to enable `export_project`. The export uses the selected saved file. Supply a filename without directory segments. The server publishes the finished artifact only when there is no existing entry at the destination. It returns the absolute artifact `path`, lowercase `format`, requested `component` or `null`, and the source snapshot's SHA-256.
@@ -201,5 +206,7 @@ Expected failures return `isError: true` and a human-readable `content` block. C
 | `selection_changed` | The project selection differs from the expected search or proposal selection. |
 | `ambiguous_target` | A proposal target matches multiple components or addresses the same description more than once. |
 | `invalid_proposal` | The proposal cannot be previewed or the reviewed content and identity do not match. |
+| `artifact_changed` | A documentation artifact has changed during verification, differs from its retained digest, or is not the exact reviewed output. |
+| `artifact_unavailable` | The documentation artifact or temporary verification copy could not be read. |
 
 Use `code` for programmatic handling and display `message` to the user. MCP handles malformed protocol messages and cancellation replies separately.

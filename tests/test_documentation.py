@@ -1,3 +1,4 @@
+import asyncio
 import copy
 import hashlib
 import sys
@@ -10,7 +11,7 @@ from jsonschema import validate
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-from logix_project_mcp.documentation import build_documentation_copy, stage_documentation_copy
+from logix_project_mcp.documentation import build_documentation_copy, stage_documentation_copy, verify_documentation_copy
 from logix_project_mcp.project import ProjectReadError, ProjectSnapshot, controller_from_l5x, parse_l5x_bytes
 from logix_project_mcp.proposals import create_proposal
 from logix_project_mcp.selection import ProjectSelection
@@ -90,6 +91,26 @@ class DocumentationCopyTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(result["artifact_sha256"], hashlib.sha256(EXPECTED).hexdigest())
                 self.assertEqual(artifact.read_bytes(), EXPECTED)
                 self.assertEqual(source.read_bytes(), PROJECT)
+                verifier = tools["verify_documentation_copy"]
+                self.assertTrue(verifier.annotations.readOnlyHint)
+                verification = {**request, "expected_artifact_sha256": result["artifact_sha256"]}
+                validate(verification, verifier.inputSchema)
+                checked = await call(verifier.name, verification)
+                self.assertEqual(checked, {**result, "valid": True, "verification": "exact_documentation_copy"})
+                self.assertEqual(await asyncio.gather(call(verifier.name, verification), call(verifier.name, verification)), [checked, checked])
+                await call(verifier.name, {**verification, "expected_artifact_sha256": "0" * 64}, "artifact_changed")
+                await call(verifier.name, {**verification, "filename": "Missing.L5X"}, "artifact_unavailable")
+                await call(verifier.name, {**verification, "filename": "../Sample.L5X"}, "invalid_arguments")
+                for changed_artifact in (
+                    EXPECTED.replace(b"Keep this comment", b"Modified unrelated comment"),
+                    EXPECTED.replace(b"Reviewed controller note", b"Modified description"),
+                ):
+                    artifact.write_bytes(changed_artifact)
+                    await call(verifier.name, verification, "artifact_changed")
+                    # Even a new digest cannot validate bytes outside the reviewed output.
+                    await call(verifier.name, {**verification, "expected_artifact_sha256": hashlib.sha256(changed_artifact).hexdigest()}, "artifact_changed")
+                    self.assertEqual(artifact.read_bytes(), changed_artifact)
+                artifact.write_bytes(EXPECTED)
                 await call(tool.name, request, "destination_exists")
                 await call(tool.name, {**request, "filename": existing.name}, "destination_exists")
                 await call(tool.name, {**request, "filename": "../Outside.L5X"}, "invalid_arguments")
@@ -97,8 +118,10 @@ class DocumentationCopyTests(unittest.IsolatedAsyncioTestCase):
                 modified = copy.deepcopy(proposal)
                 modified["preview"][0]["after"] = "Different text"
                 await call(tool.name, {**request, "filename": "Tampered.L5X", "proposal": modified}, "invalid_proposal")
+                await call(verifier.name, {**verification, "proposal": modified}, "invalid_proposal")
                 source.write_bytes(PROJECT + b"\n")
                 await call(tool.name, {**request, "filename": "Stale.L5X"}, "project_changed")
+                await call(verifier.name, verification, "project_changed")
                 self.assertEqual(source.read_bytes(), PROJECT + b"\n")
                 self.assertEqual(existing.read_bytes(), b"existing")
                 self.assertEqual(set(exports.iterdir()), {artifact, existing})
@@ -137,6 +160,41 @@ class DocumentationCopyTests(unittest.IsolatedAsyncioTestCase):
                     self.assertFalse(destination.exists())
                 self.assertEqual(source.read_bytes(), PROJECT + (b"\n" if event == "save" else b""))
             self.assertEqual(set(folder.iterdir()), {source, folder / "destination.L5X"})
+
+    async def test_verification_detects_changes_during_read(self):
+        with TemporaryDirectory() as directory:
+            folder = Path(directory).resolve()
+            source = folder / "Sample.L5X"
+            artifact = folder / "Approved.L5X"
+            selection = ProjectSelection(source)
+            root = parse_l5x_bytes(PROJECT)
+            proposal = create_proposal(selection, ProjectSnapshot(root, controller_from_l5x(root), hashlib.sha256(PROJECT).hexdigest()), OPERATIONS)
+            for event in ("source", "artifact", "selection"):
+                with self.subTest(event=event):
+                    source.write_bytes(PROJECT)
+                    artifact.write_bytes(EXPECTED)
+                    current = selection
+
+                    def change_during_verification(*args):
+                        nonlocal current
+                        expected = build_documentation_copy(*args)
+                        if event == "source":
+                            source.write_bytes(PROJECT + b"\n")
+                        elif event == "artifact":
+                            artifact.write_bytes(EXPECTED + b"\n")
+                        else:
+                            current = ProjectSelection(source, "0" * 32)
+                        return expected
+
+                    with patch("logix_project_mcp.documentation.build_documentation_copy", side_effect=change_during_verification):
+                        with self.assertRaises(ProjectReadError) as caught:
+                            await verify_documentation_copy(selection, lambda: current, folder, artifact.name, proposal, proposal["approval_id"], hashlib.sha256(EXPECTED).hexdigest())
+                    self.assertEqual(caught.exception.code, {
+                        "source": "project_changed", "artifact": "artifact_changed", "selection": "selection_changed",
+                    }[event])
+                    self.assertEqual(source.read_bytes(), PROJECT + (b"\n" if event == "source" else b""))
+                    self.assertEqual(artifact.read_bytes(), EXPECTED + (b"\n" if event == "artifact" else b""))
+                    self.assertEqual(set(folder.iterdir()), {source, artifact})
 
     def test_unsupported_encoding_is_not_modified(self):
         data = PROJECT.decode("utf-8-sig").replace('encoding="UTF-8"', 'encoding="UTF-16"').encode("utf-16")

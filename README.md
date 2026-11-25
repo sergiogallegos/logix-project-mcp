@@ -79,6 +79,7 @@ Add a local stdio server in your MCP client. Replace both paths in the `mcpServe
 | `preview_change_proposal` | Typed, source-bound before-and-after previews for controller, program, tag, and Ladder/ST routine descriptions, with approval identity |
 | `validate_change_proposal` | Check the reviewed preview and identity against the current saved project |
 | `create_documentation_copy` | A new UTF-8 full `.L5X` copy containing reviewed description changes only, when export is enabled |
+| `verify_documentation_copy` | Verify an existing documentation copy against its reviewed proposal and retained artifact hash, when export is enabled |
 | `compare_projects` | Scoped changes between the selected project and configured candidate |
 | `export_project` | A new full `.L5X` or `.L5K` file, or a component `.L5X`, in your chosen directory |
 

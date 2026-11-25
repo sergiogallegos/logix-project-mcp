@@ -16,7 +16,9 @@ from mcp.types import CallToolResult, TextContent, Tool, ToolAnnotations
 from pydantic import AfterValidator, ConfigDict, Field, TypeAdapter, ValidationError
 
 from .comparison import ComparisonReport, compare
-from .documentation import DocumentationCopy, stage_documentation_copy
+from .documentation import (
+    DocumentationCopy, DocumentationVerification, stage_documentation_copy, verify_documentation_copy as verify_copy,
+)
 from .export import ExportComponent, ExportedFile, export_saved_project, validate_filename
 from .inventory import (
     ProjectInventory,
@@ -121,6 +123,10 @@ class DocumentationCopyArguments(ValidateProposalArguments):
         str, Field(pattern=r'^[^<>:"/\\|?*\x00-\x1f]+[.][lL]5[xX]$', max_length=255),
         AfterValidator(validate_filename),
     ]
+
+
+class VerifyDocumentationArguments(DocumentationCopyArguments):
+    expected_artifact_sha256: SourceHash
 
 
 class ToolErrorDetails(TypedDict):
@@ -390,6 +396,14 @@ def create_server(
         async with project_read_lock:
             return await stage_documentation_copy(selected(), selected, export_dir, filename, proposal, expected_approval_id)
 
+    async def verify_documentation_copy(
+        proposal: Proposal, expected_approval_id: str, filename: str, expected_artifact_sha256: str,
+    ) -> DocumentationVerification:
+        """Check an existing documentation copy against its retained digest and exact reviewed output without modifying files."""
+        assert export_dir is not None
+        async with project_read_lock:
+            return await verify_copy(selected(), selected, export_dir, filename, proposal, expected_approval_id, expected_artifact_sha256)
+
     async def export_project(filename: str, component: ExportComponent | None = None) -> ExportedFile | CallToolResult:
         """Export the selected saved project or a component to a new file in the configured export directory."""
         assert export_dir is not None
@@ -423,6 +437,7 @@ def create_server(
         registrations += (
             (export_project, ExportArguments, ExportedFile),
             (create_documentation_copy, DocumentationCopyArguments, DocumentationCopy),
+            (verify_documentation_copy, VerifyDocumentationArguments, DocumentationVerification),
         )
     for handler, request_type, result_type in registrations:
         arguments = TypeAdapter(request_type)

@@ -30,6 +30,11 @@ class DocumentationCopy(StrictRecord):
     artifact_sha256: Digest
 
 
+class DocumentationVerification(DocumentationCopy):
+    valid: Literal[True]
+    verification: Literal["exact_documentation_copy"]
+
+
 @dataclass
 class ElementSpan:
     start: int
@@ -194,4 +199,61 @@ async def stage_documentation_copy(
     return {
         "path": str(destination), "format": "l5x", "source": proposal["source"],
         "approval_id": expected_approval_id, "artifact_sha256": artifact_digest,
+    }
+
+
+async def snapshot_artifact(path: Path, snapshot: Path) -> str:
+    try:
+        return await snapshot_source(path, snapshot)
+    except ProjectReadError as exc:
+        if exc.code == "project_changed":
+            raise ProjectReadError("artifact_changed", "The documentation artifact changed during verification.") from exc
+        if exc.code == "project_unavailable":
+            raise ProjectReadError("artifact_unavailable", "The documentation artifact is unavailable or is not a regular file.") from exc
+        raise
+
+
+async def verify_documentation_copy(
+    selection: ProjectSelection, current_selection: Callable[[], ProjectSelection],
+    directory: Path, filename: str, proposal: Proposal, expected_approval_id: str,
+    expected_artifact_sha256: str,
+) -> DocumentationVerification:
+    """Verify a finished artifact without writing to the selected source or export directory."""
+    if selection.path.suffix.lower() != ".l5x":
+        raise ProjectReadError("invalid_proposal", "Documentation copies require a full saved L5X source.")
+    if str(selection.path) != proposal["source"]["path"] or selection.selection_id != proposal["source"]["selection_id"]:
+        raise ProjectReadError("selection_changed", "The proposal belongs to a different saved project selection.")
+    artifact_path = directory / filename
+    try:
+        with TemporaryDirectory(prefix="logix-verify-documentation-") as temporary:
+            folder = Path(temporary)
+            source = folder / "source.L5X"
+            artifact = folder / "artifact.L5X"
+            fingerprint = await snapshot_source(selection.path, source)
+            if fingerprint != proposal["source"]["source_sha256"]:
+                raise ProjectReadError("project_changed", "The saved project changed after the proposal was created.")
+            artifact_digest = await snapshot_artifact(artifact_path, artifact)
+            if artifact_digest != expected_artifact_sha256:
+                raise ProjectReadError("artifact_changed", "The artifact does not match its retained fingerprint.")
+
+            def check() -> None:
+                expected = build_documentation_copy(source.read_bytes(), selection, proposal, expected_approval_id)
+                if artifact.read_bytes() != expected:
+                    raise ProjectReadError("artifact_changed", "The artifact is not the exact reviewed documentation copy.")
+
+            await finish_file_operation(asyncio.to_thread(check))
+            if await snapshot_source(selection.path, folder / "latest-source.L5X") != fingerprint:
+                raise ProjectReadError("project_changed", "The saved project changed during artifact verification.")
+            if await snapshot_artifact(artifact_path, folder / "latest-artifact.L5X") != artifact_digest:
+                raise ProjectReadError("artifact_changed", "The documentation artifact changed during verification.")
+            if current_selection() != selection:
+                raise ProjectReadError("selection_changed", "The shared project selection changed during artifact verification.")
+    except (ParseError, DefusedXmlException, expat.ExpatError) as exc:
+        raise ProjectReadError("invalid_project", "The saved project XML is not valid.") from exc
+    except OSError as exc:
+        raise ProjectReadError("artifact_unavailable", "The temporary verification copies could not be read.") from exc
+    return {
+        "path": str(artifact_path), "format": "l5x", "source": proposal["source"],
+        "approval_id": expected_approval_id, "artifact_sha256": artifact_digest,
+        "valid": True, "verification": "exact_documentation_copy",
     }

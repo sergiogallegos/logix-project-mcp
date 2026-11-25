@@ -14,6 +14,8 @@ Proposal tests verify the documentation-only preview and content identity throug
 
 Documentation-copy tests cover creation, replacement, and removal of existing component descriptions, exact preservation of unrelated XML bytes, staged artifact fingerprints, invalid encoding, changed source and selection during staging, and destination collisions. These are SDK-free L5X checks, not Studio 5000 import verification.
 
+Artifact verification tests also check concurrent read-only calls, retained fingerprints, modified descriptions and unrelated content, missing artifacts, stale sources, and source, artifact, or selection changes during verification.
+
 Routine-documentation tests exercise same-named Ladder and Structured Text routines in separate programs through the MCP tools, rejection of ambiguous, protected, unsupported and missing routines, and byte-for-byte preservation of saved source, comments, and pending sections.
 
 Shared-selection tests launch the packaged sharing module and switch between same-named projects in an existing MCP session. They exercise refresh, missing and moved files, stale search pages, and failed selection validation.

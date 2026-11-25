@@ -124,6 +124,12 @@ Published the [read-only diagnostics feasibility assessment](../diagnostics-feas
 
 The deterministic offline simulation uses the real inventory parser on a synthetic revision 38.02 L5X and fabricated observation records. Tests cover same-named scoped tags, simulated fresh data, stale data, absent observations, errors, and association with a different source fingerprint. The simulation and focused test passed; the SDK-free Windows Python 3.12.10 regression suite passed 29 tests with one optional native test skipped (30 total). `pip check` passed. No controller or real diagnostic endpoint was contacted and no new runtime MCP tools or dependencies were added. This was the remaining independent Ready task; LPM-033 depends on the broader unfinished LPM-031 and LPM-032 work.
 
+## 2026-11-25 · LPM-033 · In progress (documentation artifact verification slice verified) · Codex on `main`
+
+Added [`verify_documentation_copy`](../mcp-contract.md#documentation-copy), a read-only check for an existing full UTF-8 L5X documentation output in the configured export directory. It verifies the source, selection, proposal, retained receipt digest, and complete artifact bytes against a fresh reconstruction of the reviewed output, then rechecks the source and artifact fingerprints and selection. New error codes distinguish altered and unavailable artifacts. Verification does not change either file and is not vendor import or build verification.
+
+The 31-test suite passed both the editable installation and the built wheel in the SDK-free Windows Python 3.12.10 test environment (30 passed, one optional native test skipped); `pip check` passed. Synthetic MCP tests covered exact source/output preservation, concurrent verification, wrong or replaced hashes, altered descriptions and unrelated XML, missing artifacts, tampered proposals, stale saves, and path validation. Race tests covered source, artifact, and selection changes during verification. No native SDK edit or import was attempted. The documentation artifact slice is verified, but LPM-033's original native ACD and component output requirements and its broader editing prerequisites remain open.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.
