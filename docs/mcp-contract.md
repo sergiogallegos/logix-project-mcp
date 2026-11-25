@@ -195,6 +195,14 @@ On success, the command returns paths and SHA-256 values for `Reviewed.ACD` and 
 
 The native receipt includes a `build` result for the exact ACD bytes. A compiler error, failed SDK operation or timeout on a supported build prevents publication. For projects before revision 37 the receipt records `manual_required`. Use the separate local build command for full L5X review artifacts. [Offline build procedure](compatibility.md#offline-controller-build)
 
+The command publishes `Reviewed.ACD.approval.json` in the same directory as the ACD and routine component. It records the approved proposal with its scoped before/after values, the source and selection identity, exact output paths and hashes, the time of the local decision, and the build result. Retain the `review_id` printed on stdout separately from this directory. It is the SHA-256 of the approval file's exact bytes.
+
+```powershell
+.\.venv\Scripts\logix-project-mcp-review-native.exe --project 'C:\Samples\Project.ACD' --check $reviewId 'C:\Reviews\Trial'
+```
+
+Use the same shared selection file if approval used `--selection-file`. This read-only check can run without an interactive terminal or Rockwell SDK. On success it returns the recorded decision, including any outstanding manual verification, and exits 0. A stale source, refreshed selection, changed record or output, wrong review ID, or moved bundle fails the check. The retained ID checks consistency with the local review. New approvals still require an interactive terminal. Bundles from before this record was introduced need a fresh review in a new directory to use `--check`. [Recovery procedure](support.md#recover-a-native-review)
+
 ## Documentation copy
 
 With `--export-dir` configured, `create_documentation_copy` accepts a reviewed proposal, its independently retained `expected_approval_id`, and a new basename ending in `.L5X`. It reads a verified copy of the selected full UTF-8 L5X, validates the proposal against that exact snapshot, and changes only the targeted description byte ranges. Creating a description in a self-closing element also expands that element's closing delimiter. Other XML bytes, including logic, attributes, data, comments, and CDATA, remain unchanged.

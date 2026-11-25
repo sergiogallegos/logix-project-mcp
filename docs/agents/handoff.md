@@ -238,6 +238,12 @@ Native review now checks an independent copy of the staged ACD with the vendor c
 
 On Windows with Python 3.12.10 and Rockwell SDK wheel 2.0.2, the compiler passed a synthetic 37.00 full project and reviewed 38.02 documentation and private tag outputs. A 38.02 native routine-description change with an unrelated AOI passed reopen, preservation and build checks and retained the source hash. An incomplete ST expression returned `RxSTX_E_UNEXPECTED_TOKEN`. A prior export fixture opened but failed its Ladder build with `RxCMP_E_AUDIT_OUTPUTS`. The checker reported manual verification for revision 35.00. The v35 desktop opened the disposable project, but its Verify Controller result was not observed. Protected payload and signature cases used synthetic XML. The next task is LPM-035.
 
+## 2026-11-25 · LPM-035 · Done · Codex on `main`
+
+Native review records the local decision, scoped before/after description, original selection, source fingerprint, output paths and hashes, and build result in `Reviewed.ACD.approval.json`. The record is published atomically with both artifacts. The same installed command accepts `--check` with the independently retained review ID. Rechecking detects a different selection, stale source, moved bundle, edited output or altered record, and preserves the recorded manual-build status. [Review procedure](../mcp-contract.md#reviewed-native-outputs) · [Recovery from the saved source and diff](../support.md#recover-a-native-review)
+
+The clean SDK-free wheel passed all 60 applicable tests, with five optional vendor cases skipped. On Windows with Python 3.12 and Rockwell SDK wheel 2.0.2, Codex acted as the local test operator for a synthetic revision 38.02 routine description. The installed command passed readback and build, published the bundle, and returned the identical receipt through a second `--check` invocation. Both output hashes matched, and the original ACD retained SHA-256 `d4f900f333f132a171a591267e4c7c3c4a11c80ca256f2bbca3b9167700e245e`. A pre-record bundle was rejected by the check. LPM-023 is next for opening the reviewed ACD and importing the routine component in Studio.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.

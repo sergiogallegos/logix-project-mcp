@@ -6,21 +6,83 @@ import json
 import os
 import sys
 from collections.abc import Callable
-from hashlib import file_digest
+from copy import deepcopy
+from datetime import datetime, timezone
+from hashlib import file_digest, sha256
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Literal
 from xml.etree.ElementTree import Element, tostring
 
 from pydantic import TypeAdapter
 
-from .build_check import check_build
-from .documentation import description_spans
+from .build_check import BuildReport, check_build
+from .documentation import description_spans, snapshot_artifact
 from .export import RoutineComponent, component_xpath, validate_artifact
 from .inventory import PROTECTION_ELEMENTS, xml_boolean
-from .project import (ProjectReadError, ProjectSnapshot, controller_from_l5x, export_snapshot,
+from .project import (ProjectReadError, ProjectSnapshot, controller_from_l5x, export_snapshot, file_version,
                       parse_l5x, parse_l5x_bytes, run_sdk_worker, snapshot_source)
-from .proposals import Proposal, check_documentation_boundary, resolve_target, validate_proposal
+from .proposals import (Digest, Proposal, StrictRecord, canonical_json, check_documentation_boundary,
+                        resolve_target, validate_proposal)
+from .review import approval_path_for
 from .selection import ProjectSelection, read_selection, validate_project_path
+
+
+class OutputPair[T](StrictRecord):
+    acd: T
+    l5x: T
+
+
+class NativeApproval(StrictRecord):
+    schema_version: Literal[1]
+    decision: Literal["approved_native_copy"]
+    approved_at: str
+    proposal: Proposal
+    outputs: OutputPair[str]
+    approval_path: str
+    sha256: OutputPair[Digest]
+    build: BuildReport
+
+
+def output_paths(directory: Path) -> OutputPair[str]:
+    return {"acd": str(directory / "Reviewed.ACD"), "l5x": str(directory / "Routine.L5X")}
+
+
+async def check_native_approval(current: Callable[[], ProjectSelection], destination: Path, review_id: str) -> dict:
+    selection = current()
+    destination = destination.resolve(strict=True)
+    paths = output_paths(destination)
+    approval = approval_path_for(Path(paths["acd"]))
+    if not os.path.lexists(approval):
+        raise ProjectReadError("artifact_unavailable", "This bundle has no native approval record to check.")
+    acd, component = Path(paths["acd"]), Path(paths["l5x"])
+    files = (selection.path, acd, component, approval)
+    with TemporaryDirectory(prefix="logix-check-native-") as temporary:
+        folder = Path(temporary)
+        versions = [file_version(path.lstat()) for path in files]
+        saved = folder / "approval.json"
+        if await snapshot_artifact(approval, saved) != review_id:
+            raise ProjectReadError("artifact_changed", "The approval record differs from the retained review ID.")
+        record = TypeAdapter(NativeApproval).validate_json(saved.read_bytes(), strict=True)
+        if record["outputs"] != paths or record["approval_path"] != str(approval):
+            raise ProjectReadError("invalid_proposal", "The approval belongs to a different output directory.")
+        source = record["proposal"]["source"]
+        build = record["build"]
+        if (build["status"] == "failed" or build["artifact_sha256"] != record["sha256"]["acd"]
+                or build["software_revision"] != source["software_revision"]):
+            raise ProjectReadError("invalid_proposal", "The build record does not match the approved ACD.")
+        if str(selection.path) != source["path"] or selection.selection_id != source["selection_id"]:
+            raise ProjectReadError("selection_changed", "The approval belongs to a different saved project selection.")
+        if await snapshot_source(selection.path, folder / "source.ACD") != source["source_sha256"]:
+            raise ProjectReadError("project_changed", "The approved source has changed. Create a fresh preview.")
+        for kind, path in (("acd", acd), ("l5x", component)):
+            if await snapshot_artifact(path, folder / path.name) != record["sha256"][kind]:
+                raise ProjectReadError("artifact_changed", f"{path.name} differs from the approved output.")
+        if versions != [file_version(path.lstat()) for path in files]:
+            raise ProjectReadError("artifact_changed", "A file changed while checking the approval.")
+        if current() != selection:
+            raise ProjectReadError("selection_changed", "The selection changed while checking the approval.")
+    return {**record, "review_id": review_id}
 
 
 def sha256_file(path: Path) -> str:
@@ -94,6 +156,8 @@ async def publish_native(current: Callable[[], ProjectSelection], proposal: Prop
     if sys.platform != "win32":
         raise ProjectReadError("unsupported_platform", "Native review requires the Windows Logix Designer SDK.")
     selection = current()
+    proposal = deepcopy(proposal)
+    destination = destination.parent.resolve(strict=True) / destination.name
     changes = proposal["operations"]
     if (selection.path.suffix.lower() != ".acd" or len(changes) != 1
             or changes[0]["target"]["kind"] != "routine"):
@@ -112,10 +176,12 @@ async def publish_native(current: Callable[[], ProjectSelection], proposal: Prop
         await export_snapshot(acd, baseline, selection.path.name)
         root = parse_l5x(baseline)
         validate_proposal(selection, ProjectSnapshot(root, controller_from_l5x(root), fingerprint), proposal, approval_id)
-        paths = {p.suffix[1:].lower(): str(destination / p.name) for p in (acd, component)}
-        receipt = {"proposal": proposal, "outputs": paths}
-        if not confirm(receipt):
+        paths = output_paths(destination)
+        approval = approval_path_for(Path(paths["acd"]))
+        receipt = {"proposal": proposal, "outputs": paths, "approval_path": str(approval)}
+        if not confirm(deepcopy(receipt)):
             return None
+        approved_at = datetime.now(timezone.utc).isoformat()
         if current() != selection:
             raise ProjectReadError("selection_changed", "The project selection changed during native review.")
         if await snapshot_source(selection.path, folder / "approved.ACD") != fingerprint:
@@ -141,16 +207,26 @@ async def publish_native(current: Callable[[], ProjectSelection], proposal: Prop
             raise ProjectReadError("project_changed", "The source changed during native review.")
         if current() != selection:
             raise ProjectReadError("selection_changed", "The project selection changed during native review.")
-        # Windows rename publishes the complete pair and fails if the destination now exists.
-        if sha256_file(bundle / component.name) != component_hash or sha256_file(bundle / acd.name) != acd_hash:
+        record: NativeApproval = {
+            "schema_version": 1, "decision": "approved_native_copy", "approved_at": approved_at,
+            "proposal": proposal, "outputs": paths, "approval_path": str(approval), "sha256": hashes, "build": build,
+        }
+        encoded = canonical_json(record) + b"\n"
+        review_id = sha256(encoded).hexdigest()
+        staged_record = bundle / approval.name
+        with staged_record.open("xb") as stream:
+            stream.write(encoded)
+        if (sha256_file(bundle / component.name) != component_hash or sha256_file(bundle / acd.name) != acd_hash
+                or sha256_file(staged_record) != review_id):
             raise ProjectReadError("artifact_changed", "A verified output changed before publication.")
+        # Windows rename publishes both artifacts and the approval together without replacing an existing directory.
         try:
             os.rename(bundle, destination)
         except OSError as exc:
             if os.path.lexists(destination):
                 raise ProjectReadError("destination_exists", "The output directory is already occupied.") from exc
             raise
-        return {**receipt, "sha256": hashes, "build": build}
+        return {**record, "review_id": review_id}
 
 
 def confirm_native(receipt: dict) -> bool:
@@ -165,11 +241,16 @@ def main() -> None:
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--project", type=Path)
     source.add_argument("--selection-file", type=Path)
-    parser.add_argument("--proposal", required=True, type=Path)
-    parser.add_argument("--approval-id", required=True)
+    parser.add_argument("--check", metavar="REVIEW_ID", help="Check the published bundle against the retained review ID")
+    parser.add_argument("--proposal", type=Path)
+    parser.add_argument("--approval-id")
     parser.add_argument("output_directory", type=Path)
     args = parser.parse_args()
-    if not sys.stdin.isatty():
+    if args.check is not None and (args.proposal is not None or args.approval_id is not None):
+        parser.error("Use --check with the output directory and the original source selection.")
+    if args.check is None and (args.proposal is None or args.approval_id is None):
+        parser.error("Approval requires --proposal and --approval-id.")
+    if args.check is None and not sys.stdin.isatty():
         parser.error("Review requires a local interactive terminal.")
     try:
         if args.project:
@@ -177,6 +258,10 @@ def main() -> None:
             current = lambda: fixed
         else:
             current = lambda: read_selection(args.selection_file)
+        if args.check is not None:
+            checked = asyncio.run(check_native_approval(current, args.output_directory.absolute(), args.check))
+            print(json.dumps(checked))
+            return
         proposal = TypeAdapter(Proposal).validate_json(args.proposal.read_bytes(), strict=True)
         result = asyncio.run(publish_native(current, proposal, args.approval_id, args.output_directory.absolute(),
                                             confirm_native))

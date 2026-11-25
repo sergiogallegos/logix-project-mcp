@@ -1,5 +1,7 @@
 import asyncio
+import json
 import os
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -25,7 +27,7 @@ COMPONENT = FULL.replace(b'TargetType="Controller"', b'TargetType="Routine" Targ
 
 class NativeReviewTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        self.folder = Path(self.enterContext(TemporaryDirectory()))
+        self.folder = Path(self.enterContext(TemporaryDirectory())).resolve()
         self.source = self.folder / "Source.ACD"
         self.source.write_bytes(FULL)
         self.destination = self.folder / "Export"
@@ -36,7 +38,10 @@ class NativeReviewTests(unittest.IsolatedAsyncioTestCase):
         self.enterContext(patch.object(native, "sys", Mock(platform="win32")))
         self.enterContext(patch.object(native, "export_snapshot", self.export))
         self.importer = self.enterContext(patch.object(native, "run_sdk_worker", side_effect=self.import_xml))
-        self.build = self.enterContext(patch.object(native, "check_build", return_value={"status": "passed"}))
+        self.build = self.enterContext(patch.object(native, "check_build", side_effect=self.build_report))
+
+    async def build_report(self, acd, digest, *, known_revision):
+        return {"status": "passed", "artifact_sha256": digest, "software_revision": known_revision, "diagnostics": []}
 
     async def export(self, acd, output, name, xpath=None):
         output.write_bytes(COMPONENT if xpath else acd.read_bytes())
@@ -57,7 +62,11 @@ class NativeReviewTests(unittest.IsolatedAsyncioTestCase):
         results = await asyncio.gather(self.publish(), self.publish(), return_exceptions=True)
         result, = [value for value in results if isinstance(value, dict)]
         self.assertEqual([e.code for e in results if isinstance(e, ProjectReadError)], ["destination_exists"])
-        self.assertEqual({p.name for p in self.destination.iterdir()}, {"Reviewed.ACD", "Routine.L5X"})
+        self.assertEqual({p.name for p in self.destination.iterdir()},
+                         {"Reviewed.ACD", "Routine.L5X", "Reviewed.ACD.approval.json"})
+        record = Path(result["approval_path"])
+        self.assertEqual(native.sha256_file(record), result["review_id"])
+        self.assertEqual(json.loads(record.read_bytes()), {k: v for k, v in result.items() if k != "review_id"})
         for fmt, name in result["outputs"].items():
             path = Path(name)
             self.assertEqual(native.sha256_file(path), result["sha256"][fmt])
@@ -69,11 +78,78 @@ class NativeReviewTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["build"]["status"], "passed")
 
     async def test_build_error_prevents_native_publication(self):
+        self.build.side_effect = None
         self.build.return_value = {"status": "failed", "diagnostics": ["Synthetic compiler diagnostic"]}
         with self.assertRaisesRegex(ProjectReadError, "Synthetic compiler diagnostic"):
             await self.publish()
         self.assertEqual(list(self.folder.iterdir()), [self.source])
         self.assertEqual(self.source.read_bytes(), FULL)
+
+    async def test_check_rejects_replay_tampering_and_changed_selection(self):
+        receipt = await self.publish()
+
+        async def check(current=lambda: self.selection):
+            return await native.check_native_approval(current, self.destination, receipt["review_id"])
+
+        self.assertEqual(await check(), receipt)
+        for path, error in ((self.source, "source has changed"), (Path(receipt["outputs"]["acd"]), "approved output"),
+                            (Path(receipt["outputs"]["l5x"]), "approved output"),
+                            (Path(receipt["approval_path"]), "retained review ID")):
+            data = path.read_bytes()
+            path.write_bytes(data + b" ")
+            with self.assertRaisesRegex(ProjectReadError, error):
+                await check()
+            path.write_bytes(data)
+        refreshed = self.selection._replace(selection_id="a" * 32)
+        with self.assertRaisesRegex(ProjectReadError, "different saved project selection"):
+            await check(lambda: refreshed)
+        with self.assertRaisesRegex(ProjectReadError, "selection changed"):
+            await check(Mock(side_effect=[self.selection, refreshed]))
+        relocated = self.folder / "Relocated"
+        self.destination.rename(relocated)
+        with self.assertRaisesRegex(ProjectReadError, "different output directory"):
+            await native.check_native_approval(lambda: self.selection, relocated, receipt["review_id"])
+        self.assertFalse(self.destination.exists())
+
+    async def test_read_only_check_from_noninteractive_cli(self):
+        receipt = await self.publish()
+        args = [sys.executable, "-m", "logix_project_mcp.native_review", "--project", str(self.source),
+                "--check", receipt["review_id"], str(self.destination)]
+        def invoke(command):
+            return subprocess.run(command, input="", capture_output=True, text=True, timeout=30)
+        verified = await asyncio.to_thread(invoke, args)
+        self.assertEqual(verified.returncode, 0, verified.stderr)
+        self.assertEqual(json.loads(verified.stdout), receipt)
+        args[-2] = self.proposal["approval_id"]
+        rejected = await asyncio.to_thread(invoke, args)
+        self.assertEqual(rejected.returncode, 1)
+        self.assertIn("retained review ID", rejected.stderr)
+        authorize = args[:5] + ["--proposal", "unused.json", "--approval-id", self.proposal["approval_id"],
+                                str(self.folder / "Second")]
+        declined = await asyncio.to_thread(invoke, authorize)
+        self.assertEqual(declined.returncode, 2)
+        self.assertIn("interactive terminal", declined.stderr)
+        self.assertFalse((self.folder / "Second").exists())
+
+    async def test_manual_result_is_retained_and_mid_check_save_is_rejected(self):
+        async def manual(acd, digest, *, known_revision):
+            return {"status": "manual_required", "artifact_sha256": digest, "software_revision": known_revision,
+                    "diagnostics": ["Verify Controller in Studio."]}
+        self.build.side_effect = manual
+        receipt = await self.publish()
+        checked = await native.check_native_approval(lambda: self.selection, self.destination, receipt["review_id"])
+        self.assertEqual(checked["build"], receipt["build"])
+        snapshot = native.snapshot_artifact
+
+        async def save(path, snapshot_path):
+            digest = await snapshot(path, snapshot_path)
+            if path.name == "Routine.L5X":
+                self.source.write_bytes(FULL + b" ")
+            return digest
+
+        with patch.object(native, "snapshot_artifact", side_effect=save):
+            with self.assertRaisesRegex(ProjectReadError, "changed while checking"):
+                await native.check_native_approval(lambda: self.selection, self.destination, receipt["review_id"])
 
     async def test_component_changed_during_build_prevents_publication(self):
         async def alter_component(acd, digest, *, known_revision):
@@ -183,6 +259,7 @@ class NativeSdkTests(unittest.IsolatedAsyncioTestCase):
                                                   lambda _: True)
             self.assertEqual(receipt["build"]["status"], "passed")
             self.assertEqual(receipt["build"]["artifact_sha256"], receipt["sha256"]["acd"])
+            self.assertEqual(await native.check_native_approval(lambda: selection, output, receipt["review_id"]), receipt)
             for kind, filename in receipt["outputs"].items():
                 self.assertEqual(native.sha256_file(Path(filename)), receipt["sha256"][kind])
             self.assertEqual(parse_l5x(output / "Routine.L5X").findtext(".//Routine[@Use='Target']/Description"),

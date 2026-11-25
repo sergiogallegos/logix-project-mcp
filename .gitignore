@@ -7,5 +7,6 @@ dist/
 *.[Aa][Cc][Dd]
 *.[Ll]5[KkXx]
 *.[Ll]5[Xx].approval.json
+*.[Aa][Cc][Dd].approval.json
 *.nupkg
 *.whl

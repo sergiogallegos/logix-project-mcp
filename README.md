@@ -22,7 +22,7 @@ For an unused, private decimal DINT in controller or program scope, preview crea
 
 You can also create an uncalled Ladder or Structured Text routine that assigns one integer literal to a private program DINT. For an existing routine of that form, preview a new literal and approve a separate full L5X copy. [Offline routine edit walkthrough](docs/mcp-contract.md#offline-routine-edits)
 
-On Windows, you can approve a description change for one routine in a saved ACD. The local command imports the reviewed routine component into a temporary ACD, reopens it with the SDK, and publishes `Reviewed.ACD` and `Routine.L5X` together in a new directory. [Native review walkthrough](docs/mcp-contract.md#reviewed-native-outputs)
+On Windows, you can approve a description change for one routine in a saved ACD. The local command imports the component into a temporary ACD, reopens it with the SDK, and publishes `Reviewed.ACD`, `Routine.L5X` and their approval record together. Keep the returned `review_id` separately. Before opening the copy or importing the component, use `--check` to confirm that the source and both outputs match the local approval. [Native review walkthrough](docs/mcp-contract.md#reviewed-native-outputs)
 
 Native review also builds a disposable copy before publication when the project revision supports the SDK compiler. To check a reviewed full L5X or recheck an ACD, run `logix-project-mcp-check-build` with the artifact path and SHA-256 from its receipt. The result includes compiler diagnostics or identifies when a manual Studio verification is required. [Build checks and exit codes](docs/compatibility.md#offline-controller-build)
 

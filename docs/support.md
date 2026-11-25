@@ -14,6 +14,12 @@ In the intended Studio window, save your changes and choose **Tools > Send Curre
 4. Run the installed review command from a terminal in the same environment. Supply the original selection file (or the fixed source path used during preview), the two JSON files, and the candidate path. Review the values at the prompt. On approval, retain the returned `review_id` separately and keep the adjacent `.approval.json` with the candidate. [Review command examples](mcp-contract.md#local-review-and-approval)
 5. Before opening the copy, run the review command with `--check`, the retained review ID and the same selection or source. In Studio, import the returned `artifact.path` into a separate, unused ACD destination. For a repeatable sample run with readback, use the [acceptance walkthrough](engineer-acceptance.md).
 
+## Recover a native review
+
+If review was declined or validation failed before publication, reopen the original saved ACD. The proposal's `preview` identifies the program, routine and requested before/after description. After a new save or a change of selection, generate a fresh preview against the currently selected source, check the diff, then approve into a new directory.
+
+If a published bundle fails `--check`, keep it for comparison and use the original saved project to resume work. For an independent diff, select the original as the baseline, set `--compare-project` to the candidate `Reviewed.ACD`, and call `compare_projects`. Compare the returned source and candidate hashes and the routine's `xml_diff` with the retained receipt and proposal. A replacement bundle requires a fresh local approval. [Project comparison](mcp-contract.md#project-comparison) · [Native review and check](mcp-contract.md#reviewed-native-outputs)
+
 ## Troubleshooting
 
 | Symptom | What to check |
