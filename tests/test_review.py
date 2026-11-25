@@ -13,7 +13,7 @@ from unittest.mock import patch
 from logix_project_mcp.documentation import stage_documentation_copy
 from logix_project_mcp.project import ProjectReadError, ProjectSnapshot, controller_from_l5x, parse_l5x_bytes
 from logix_project_mcp.proposals import canonical_json, create_proposal
-from logix_project_mcp.review import approval_path_for, main, review_artifact
+from logix_project_mcp.review import approval_path_for, check_approval, main, review_artifact
 from logix_project_mcp.selection import ProjectSelection
 from test_documentation import EXPECTED, OPERATIONS, PROJECT
 
@@ -29,6 +29,52 @@ async def fixture(folder):
 
 
 class ReviewTests(unittest.IsolatedAsyncioTestCase):
+    async def test_check_binds_sidecar_to_retained_review_and_current_files(self):
+        with TemporaryDirectory() as directory:
+            selection, proposal, receipt, artifact = await fixture(Path(directory).resolve())
+            sidecar = approval_path_for(artifact)
+            current = lambda: selection
+            with self.assertRaises(ProjectReadError):
+                await check_approval(selection, current, artifact, "0" * 64)
+            self.assertFalse(sidecar.exists())
+            record = await review_artifact(selection, current, artifact, proposal, receipt, lambda _: True)
+            review_id = record["review_id"]
+            original = sidecar.read_bytes()
+            with self.assertRaisesRegex(ValueError, "retained review ID"):
+                await check_approval(selection, current, artifact, "0" * 64)
+            other = artifact.with_name("Another.L5X")
+            other.write_bytes(artifact.read_bytes())
+            approval_path_for(other).write_bytes(original)
+            with self.assertRaisesRegex(ValueError, "selected paths"):
+                await check_approval(selection, current, other, review_id)
+            for change in ({"unknown": True}, {"decision": "declined"}, {"approval_path": "other"},
+                           {"artifact": {**record["artifact"], "source": {**proposal["source"], "path": "other"}}}):
+                with self.subTest(change=change):
+                    sidecar.write_bytes(canonical_json({**record, **change}))
+                    with self.assertRaises(ValueError):
+                        await check_approval(selection, current, artifact, review_id)
+            sidecar.write_bytes(original)
+            switched = ProjectSelection(selection.path, "1" * 32)
+            with self.assertRaises(ProjectReadError) as stale:
+                await check_approval(switched, lambda: switched, artifact, review_id)
+            self.assertEqual(stale.exception.code, "selection_changed")
+            for path, error in ((artifact, "artifact_changed"), (selection.path, "project_changed")):
+                data = path.read_bytes()
+                path.write_bytes(data + b"\n")
+                with self.assertRaises(ProjectReadError) as changed:
+                    await check_approval(selection, current, artifact, review_id)
+                self.assertEqual(changed.exception.code, error)
+                path.write_bytes(data)
+            self.assertEqual(sidecar.read_bytes(), original)
+
+            def replace_record():
+                # Same reviewed content, different bytes while the files are checked.
+                sidecar.write_bytes(original + b"\n")
+                return selection
+
+            with self.assertRaisesRegex(ValueError, "approval record changed"):
+                await check_approval(selection, replace_record, artifact, review_id)
+
     async def test_decline_approval_and_replay(self):
         with TemporaryDirectory() as directory:
             folder = Path(directory).resolve()
@@ -143,5 +189,19 @@ class ReviewCommandTests(unittest.TestCase):
                             self.assertEqual(json.loads(stdout.getvalue()), json.loads(approval_path_for(artifact).read_bytes()))
                     self.assertIn("Reviewed controller note", stderr.getvalue())
                     self.assertIn("Type APPROVE", stderr.getvalue())
+            sidecar = approval_path_for(artifact)
+            original = sidecar.read_bytes()
+            review_id = json.loads(original)["review_id"]
+            command = [sys.executable, "-m", "logix_project_mcp.review", "--project", str(selection.path),
+                       "--check", review_id, str(artifact)]
+            checked = subprocess.run(command, stdin=subprocess.DEVNULL, text=True, capture_output=True)
+            self.assertEqual(checked.returncode, 0, checked.stderr)
+            self.assertEqual(json.loads(checked.stdout)["artifact"], json.loads(original)["artifact"])
+            self.assertEqual(sidecar.read_bytes(), original)
+            sidecar.write_text("invalid", encoding="utf-8")
+            rejected = subprocess.run(command, stdin=subprocess.DEVNULL, text=True, capture_output=True)
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertFalse(rejected.stdout)
+            self.assertIn("Invalid approval record", rejected.stderr)
             self.assertEqual(selection.path.read_bytes(), PROJECT)
             self.assertEqual(artifact.read_bytes(), EXPECTED)

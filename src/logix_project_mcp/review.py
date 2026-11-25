@@ -17,7 +17,7 @@ from pydantic import TypeAdapter, ValidationError
 
 from .documentation import DocumentationCopy, DocumentationVerification, verify_documentation_copy
 from .export import validate_filename
-from .project import ProjectReadError
+from .project import ProjectReadError, snapshot_source
 from .proposals import Digest, Proposal, StrictRecord, canonical_json
 from .selection import ProjectSelection, read_selection, validate_project_path
 
@@ -42,6 +42,13 @@ def approval_path_for(artifact: Path) -> Path:
     return artifact.with_name(artifact.name + ".approval.json")
 
 
+def review_preview(proposal: Proposal, verified: DocumentationVerification, approval_path: Path) -> ReviewPreview:
+    content: ReviewContent = {
+        "schema_version": 1, "proposal": proposal, "artifact": verified, "approval_path": str(approval_path),
+    }
+    return {**content, "review_id": sha256(canonical_json(content)).hexdigest()}
+
+
 def publish_approval(path: Path, record: ApprovalRecord) -> None:
     try:
         with TemporaryDirectory(prefix=".logix-review-", dir=path.parent) as temporary:
@@ -58,11 +65,7 @@ def publish_approval(path: Path, record: ApprovalRecord) -> None:
         raise ProjectReadError("export_failed", "Could not publish the local approval record.") from exc
 
 
-async def review_artifact(
-    selection: ProjectSelection, current_selection: Callable[[], ProjectSelection],
-    artifact: Path, proposal: Proposal, receipt: DocumentationCopy,
-    confirm: Callable[[ReviewPreview], bool],
-) -> ApprovalRecord | None:
+def review_path(artifact: Path, selection: ProjectSelection) -> Path:
     # Resolve the parent, not the final entry: the snapshot reader rejects symlinks.
     artifact = artifact.parent.resolve() / artifact.name
     validate_filename(artifact.name)
@@ -70,6 +73,41 @@ async def review_artifact(
         raise ValueError("Choose a staged full L5X documentation copy.")
     if artifact.exists() and artifact.samefile(selection.path):
         raise ProjectReadError("invalid_proposal", "Review a separate staged copy, not the saved source.")
+    return artifact
+
+
+async def check_approval(
+    selection: ProjectSelection, current_selection: Callable[[], ProjectSelection],
+    artifact: Path, expected_review_id: str,
+) -> ReviewPreview:
+    artifact = review_path(artifact, selection)
+    approval_path = approval_path_for(artifact)
+    with TemporaryDirectory(prefix="logix-check-approval-") as temporary:
+        snapshot = Path(temporary) / "approval.json"
+        fingerprint = await snapshot_source(approval_path, snapshot)
+        record = TypeAdapter(ApprovalRecord).validate_json(snapshot.read_bytes(), strict=True)
+        approved = record["artifact"]
+        if (record["review_id"] != expected_review_id or record["approval_path"] != str(approval_path)
+                or approved["path"] != str(artifact)):
+            raise ValueError("The approval record does not match the retained review ID or selected paths.")
+        verified = await verify_documentation_copy(
+            selection, current_selection, artifact.parent, artifact.name, record["proposal"],
+            approved["approval_id"], approved["artifact_sha256"],
+        )
+        preview = review_preview(record["proposal"], verified, approval_path)
+        if verified != approved or preview["review_id"] != expected_review_id:
+            raise ValueError("The recorded approval differs from the verified review content.")
+        if await snapshot_source(approval_path, Path(temporary) / "latest.json") != fingerprint:
+            raise ValueError("The approval record changed during verification.")
+    return preview
+
+
+async def review_artifact(
+    selection: ProjectSelection, current_selection: Callable[[], ProjectSelection],
+    artifact: Path, proposal: Proposal, receipt: DocumentationCopy,
+    confirm: Callable[[ReviewPreview], bool],
+) -> ApprovalRecord | None:
+    artifact = review_path(artifact, selection)
     if receipt["path"] != str(artifact) or receipt["source"] != proposal["source"] or receipt["approval_id"] != proposal["approval_id"]:
         raise ProjectReadError("invalid_proposal", "The selected artifact, creation receipt and proposal do not match.")
     approval_path = approval_path_for(artifact)
@@ -83,13 +121,7 @@ async def review_artifact(
         )
 
     verified = await verify()
-    content: ReviewContent = {
-        "schema_version": 1,
-        "proposal": proposal,
-        "artifact": verified,
-        "approval_path": str(approval_path),
-    }
-    preview: ReviewPreview = {**content, "review_id": sha256(canonical_json(content)).hexdigest()}
+    preview = review_preview(proposal, verified, approval_path)
     if not confirm(deepcopy(preview)):
         return None
     if await verify() != verified:
@@ -117,11 +149,16 @@ def main() -> None:
     selection = parser.add_mutually_exclusive_group(required=True)
     selection.add_argument("--project", type=Path, help="The saved source project")
     selection.add_argument("--selection-file", type=Path, help="The current shared selection JSON")
-    parser.add_argument("--proposal", required=True, type=Path, help="The preview tool's structured JSON result")
-    parser.add_argument("--receipt", required=True, type=Path, help="The copy creation tool's structured JSON result")
+    parser.add_argument("--check", metavar="REVIEW_ID", help="Recheck a finalized copy using the review ID retained at approval")
+    parser.add_argument("--proposal", type=Path, help="The preview tool's structured JSON result")
+    parser.add_argument("--receipt", type=Path, help="The copy creation tool's structured JSON result")
     parser.add_argument("artifact", type=Path, help="The existing staged documentation copy")
     args = parser.parse_args()
-    if not sys.stdin.isatty():
+    if args.check is not None and (args.proposal or args.receipt):
+        parser.error("--check reads the existing approval record. Omit --proposal and --receipt.")
+    if args.check is None and not (args.proposal and args.receipt):
+        parser.error("Approval requires both --proposal and --receipt.")
+    if args.check is None and not sys.stdin.isatty():
         parser.error("Local review requires an interactive terminal; automated confirmation is not supported.")
     try:
         if args.project is not None:
@@ -130,6 +167,10 @@ def main() -> None:
         else:
             selection_file = args.selection_file.resolve()
             current = lambda: read_selection(selection_file)
+        if args.check is not None:
+            verified = asyncio.run(check_approval(current(), current, args.artifact, args.check))
+            print(json.dumps(verified, ensure_ascii=True))
+            return
         proposal = TypeAdapter(Proposal).validate_json(args.proposal.read_bytes(), strict=True)
         receipt = TypeAdapter(DocumentationCopy).validate_json(args.receipt.read_bytes(), strict=True)
         result = asyncio.run(review_artifact(current(), current, args.artifact, proposal, receipt, terminal_confirm))
@@ -138,7 +179,8 @@ def main() -> None:
             raise SystemExit(2)
         print(json.dumps(result, ensure_ascii=True))
     except ValidationError as exc:
-        print("The proposal or creation receipt is not valid structured JSON.", file=sys.stderr)
+        print("Invalid approval record." if args.check is not None else
+              "The proposal or creation receipt is not valid structured JSON.", file=sys.stderr)
         raise SystemExit(1) from exc
     except (ProjectReadError, OSError, ValueError) as exc:
         print(str(exc), file=sys.stderr)

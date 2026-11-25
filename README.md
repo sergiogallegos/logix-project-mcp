@@ -89,6 +89,8 @@ The documentation workflow rejects exports with recognized safety-class or safet
 
 To finalize a staged documentation copy, use the local interactive `logix-project-mcp-review` command. It presents the exact proposal and verifies the source and artifact both before and after confirmation. See [local review and approval](docs/mcp-contract.md#local-review-and-approval).
 
+Before opening an approved full L5X in Studio 5000, run `logix-project-mcp-review --check REVIEW_ID --project Source.L5X Reviewed.L5X` with the ID retained at approval. It verifies the current files and reports the absolute path to open. [Open a reviewed documentation copy](docs/studio-5000-integration.md#open-a-reviewed-full-l5x-documentation-copy)
+
 To enable export, add `--export-dir` followed by an existing directory you choose. Ask the agent for a new filename in that directory, such as `Review.L5X`. The tool reads a snapshot of the selected project and preserves existing files. Copying a full `.L5X` to a new `.L5X` keeps its exact bytes and works without the SDK. Converting formats and exporting components use the Rockwell SDK on Windows.
 
 ### Share a project from Windows

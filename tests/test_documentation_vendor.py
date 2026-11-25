@@ -14,6 +14,8 @@ from mcp.client.stdio import stdio_client
 from logix_project_mcp.documentation import description_spans
 from logix_project_mcp.inventory import project_inventory
 from logix_project_mcp.project import controller_from_l5x, export_snapshot, parse_l5x
+from logix_project_mcp.review import check_approval, review_artifact
+from logix_project_mcp.selection import ProjectSelection
 
 
 SYNTHETIC_SAMPLE = os.environ.get("LOGIX_PROJECT_MCP_TEST_DOCUMENTATION_L5X")
@@ -49,11 +51,15 @@ class VendorDocumentationTests(unittest.IsolatedAsyncioTestCase):
                     verified = await call("verify_documentation_copy", {**request, "expected_artifact_sha256": receipt["artifact_sha256"]})
                     self.assertEqual(verified["vendor_verification"], "not_performed")
                 artifact = Path(receipt["path"])
+                selected = ProjectSelection(source)
+                record = await review_artifact(selected, lambda: selected, artifact, proposal, receipt, lambda _: True)
+                handoff = await check_approval(selected, lambda: selected, artifact, record["review_id"])
+                self.assertEqual(handoff["artifact"], verified)
                 artifact_digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
                 self.assertEqual(artifact_digest, receipt["artifact_sha256"])
                 try:
                     scratch = folder / "SdkReadCopy.L5X"
-                    shutil.copyfile(artifact, scratch)
+                    shutil.copyfile(handoff["artifact"]["path"], scratch)
                     reopened = folder / "SdkReexport.L5X"
                     await export_snapshot(scratch, reopened, "synthetic documentation copy")
                     original_root = parse_l5x(source)

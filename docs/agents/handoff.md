@@ -142,6 +142,14 @@ Added the packaged [`logix-project-mcp-review`](../mcp-contract.md#local-review-
 
 The editable package and SDK-free wheel both passed 36 tests, with two optional native checks skipped (38 total); `pip check` passed. The wheel and refreshed editable installation expose the new console command. Synthetic tests covered mocked interactive confirmation and decline, piped input rejection in a subprocess, invalid receipt identity, replay, a competing sidecar, and source, artifact, or selection changes during the review. No real project was approved. Generated approval sidecars are ignored by Git. Broader native-artifact approval and Studio 5000 integration remain unimplemented; this task stays In progress against the original brief.
 
+## 2026-11-25 · LPM-023 · In progress · Codex on `main`
+
+Implemented a read-only handoff for an approved full L5X documentation copy. The local review command takes the independently retained review ID, the current project selection and the explicit artifact path. It reconstructs the expected XML, checks the approval record and returns the verified paths and hashes. The [desktop walkthrough](../studio-5000-integration.md#open-a-reviewed-full-l5x-documentation-copy) covers pending editor edits and choosing a separate ACD destination.
+
+On Windows with Python 3.12.10 the editable install and SDK-free wheel each passed 37 tests with two optional native checks skipped. Both passed `pip check`. The optional synthetic SDK 2.0.2 reopen test also passed separately. In a desktop test, Logix Designer imported the checked revision 38.02 full L5X into a fresh scratch ACD. An MCP subprocess read the resulting ACD and confirmed its saved hash and the exact synthetic controller description after stripping vendor formatting whitespace. The UI probe timed out waiting for the editor title after import. The saved ACD read supplied the result evidence.
+
+The full task still depends on reviewed native ACD and component L5X output. A component-name conflict and import into an already dirty project remain untested. No subsequent task is marked Ready.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.

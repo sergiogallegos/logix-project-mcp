@@ -22,6 +22,8 @@ For the optional SDK documentation reopen test, see [documentation verification]
 
 Local review tests cover the packaged command, mocked interactive approval and decline, noninteractive rejection, invalid receipts, replay and a competing approval sidecar, and changes to source, artifact, or shared selection during review. They use synthetic documentation artifacts and never approve a real project.
 
+The same tests exercise the read-only `--check` command with a retained review ID. They cover a moved or altered record, a different selection, edits to the source or reviewed copy, and a record replaced during verification. The optional SDK reopen test also uses the path returned by this check.
+
 Routine-documentation tests exercise same-named Ladder and Structured Text routines in separate programs through the MCP tools, rejection of ambiguous, protected, unsupported and missing routines, and byte-for-byte preservation of saved source, comments, and pending sections.
 
 Shared-selection tests launch the packaged sharing module and switch between same-named projects in an existing MCP session. They exercise refresh, missing and moved files, stale search pages, and failed selection validation.

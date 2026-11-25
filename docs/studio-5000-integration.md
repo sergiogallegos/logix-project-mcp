@@ -27,6 +27,25 @@ The pre-save SHA-256 for the edited sample began `795ee045`, and the post-save S
 
 ## Desktop walkthrough
 
+### Open a reviewed full L5X documentation copy
+
+1. Keep the `review_id` from the successful interactive approval in your review notes. Keep the adjacent `.approval.json` file with the staged copy. The ID identifies the reviewed paths, hashes and proposed descriptions. The approval record identifies a local decision and carries no signer credentials. [Local review and approval](mcp-contract.md#local-review-and-approval)
+2. Immediately before opening the file, run the following command with the retained ID and both paths. For a shared project, use the original `--selection-file` in place of `--project`. A refresh changes the selection ID.
+
+   ```powershell
+   $reviewId = Read-Host 'Review ID retained at approval'
+   logix-project-mcp-review --check $reviewId --project 'C:\Projects\Source.L5X' 'C:\Reviews\Reviewed.L5X'
+   ```
+
+3. On success, the JSON gives the absolute file to open in `artifact.path`, the verified SHA-256 in `artifact.artifact_sha256`, and the saved source path and hash in `artifact.source`. If the command reports a mismatch, check the selected paths and ID. A changed project requires a fresh proposal and approval. This check reads the files on disk and cannot see pending edits in an editor window.
+4. Open a separate offline Logix Designer window if another project has unsaved edits. Choose **File > Open** and enter the verified `artifact.path`. In **Save Imported Project As**, choose an unused scratch destination such as `C:\Reviews\Reviewed-inspection.ACD`, then select **Import**. Review the import messages and compare the scoped descriptions with the proposal before using the imported copy. The verified hash identifies the input L5X. Studio creates the destination ACD during import. [Rockwell full-project import](https://www.rockwellautomation.com/en-gb/docs/studio-5000-logix-designer/38-02/contents-ditamap/studio-5000-logix-designer/import-and-export/import-export-a-full-project.html)
+
+Run staging, review and Studio under a Windows account that can read the resulting files. In the desktop test the sandbox account could read its staged copy, while the editor account received an access-denied error. Staging a fresh synthetic copy under the editor account resolved that error.
+
+On Windows 11, Logix Designer imported the synthetic revision 38.02 reviewed L5X into a new ACD. Reading that ACD through MCP returned the reviewed controller description. The saved source and reviewed L5X hashes also matched the approval record after import.
+
+### Verify the Custom Tools path
+
 Use copies of a matching synthetic project and put spaces in both filenames, for example, `Probe Alpha.ACD` and `Probe Beta.ACD`. Use the Windows setup in the [compatibility matrix](compatibility.md). Create an empty scratch directory for the diagnostic tool.
 
 1. Save this script as `capture.py` in the scratch directory.

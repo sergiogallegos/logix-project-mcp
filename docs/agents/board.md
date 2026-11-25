@@ -30,7 +30,7 @@ Follow the [agent workflow](README.md) and record acceptance evidence in the [ha
 | [LPM-033](tasks.md#lpm-033) | Staged `.ACD` and `.L5X` outputs | LPM-015, LPM-031, LPM-032 | In progress | Codex on `main` |
 | [LPM-034](tasks.md#lpm-034) | Logix verification and preservation checks | LPM-003, LPM-033 | In progress | Codex on `main` |
 | [LPM-035](tasks.md#lpm-035) | Local review, approval, and artifact finalization | LPM-030, LPM-034 | In progress | Codex on `main` |
-| [LPM-023](tasks.md#lpm-023) | Open or import reviewed artifacts in Studio 5000 | LPM-022, LPM-035 | Planned | — |
+| [LPM-023](tasks.md#lpm-023) | Open or import reviewed artifacts in Studio 5000 | LPM-022, LPM-035 | In progress (full L5X handoff) | Codex on `main` |
 | [LPM-040](tasks.md#lpm-040) | Failure recovery, file boundaries, and diagnostics | LPM-002, LPM-021, LPM-033 | Planned | — |
 | [LPM-041](tasks.md#lpm-041) | Large-project performance and reliability | LPM-013, LPM-014, LPM-016, LPM-040 | Planned | — |
 | [LPM-042](tasks.md#lpm-042) | Packaging, clean installs, and release CI | LPM-001, LPM-022, LPM-035, LPM-040 | Planned | — |
