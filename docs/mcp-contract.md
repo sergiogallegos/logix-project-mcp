@@ -216,7 +216,7 @@ Expected failures return `isError: true` and a human-readable `content` block. C
 | `invalid_project` | The XML is invalid, rejected by the parser, or missing the required full project structure. |
 | `unsupported_platform` | The operation requires the Rockwell SDK on Windows. |
 | `sdk_timeout` | The SDK worker exceeded its export time limit. |
-| `sdk_error` | The SDK worker reported a failure. The message contains its diagnostic. |
+| `sdk_error` | The SDK worker failed. Its status identifies an SDK import error, .NET initialization error, export failure, or unexpected exit code. Run the local doctor for installation checks. |
 | `destination_exists` | The export destination is already occupied. |
 | `export_failed` | An output file could not be created, validated, or published. |
 | `selection_required` | Share a saved project using the local helper. |

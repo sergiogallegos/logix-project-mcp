@@ -79,11 +79,13 @@ class CustomToolsTests(unittest.TestCase):
             capacity = b'<CustomToolsContent SchemaRevision="1.0">' + (
                 b"<CustomTool><Command>Other.exe</Command></CustomTool>" * 16
             ) + b"</CustomToolsContent>"
-            for contents in (conflict, capacity, b"<invalid/>", b"<broken", b'<!DOCTYPE CustomToolsContent><CustomToolsContent SchemaRevision="1.0"/>'):
+            for contents in (conflict, capacity, b"<invalid/>", b"<broken", b"<!DOCTYPE PrivateSample><a/>",
+                             b'<?xml version="1.0" encoding="PrivateSample"?><a/>'):
                 with self.subTest(contents=contents[:60]):
                     config.write_bytes(contents)
-                    with self.assertRaises(MenuError):
+                    with self.assertRaises(MenuError) as failure:
                         configure_menu(config, values)
+                    self.assertNotIn("PrivateSample", str(failure.exception))
                     self.assertEqual(config.read_bytes(), contents)
             config.write_bytes(conflict)
             with self.assertRaises(MenuError):

@@ -127,6 +127,8 @@ The comparison tries the inherited Windows environment first. It then tries the 
 
 Pass a full `.L5X` export with `--project` to test the SDK-free path. The diagnostic prints setup and launch results without printing project contents or environment values. Its exit code is `0` when the requested primary checks pass and `1` when a required check or primary MCP probe fails. A failed reduced comparison prints a warning when the inherited launch passes.
 
+If a tool reports `invalid_project`, check the XML line and column when provided, or re-export a full L5X with a supported encoding and without a document type declaration. For `project_unavailable`, check read access and retry after the file is unlocked. The running MCP session can read the corrected file on the next request. Native SDK failures include a setup hint or worker exit code. [Tool error codes](docs/mcp-contract.md#tool-errors)
+
 ## Contribute
 
 See [BUILD.md](BUILD.md) for local and CI checks, [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidance, and [AGENTS.md](AGENTS.md) for the source map and agent skills. The [product task board](docs/agents/board.md) tracks the path to 1.0. The server is [MIT-licensed](LICENSE). The Rockwell SDK is installed separately.

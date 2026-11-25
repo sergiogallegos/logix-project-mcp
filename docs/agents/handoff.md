@@ -150,6 +150,16 @@ On Windows with Python 3.12.10 the editable install and SDK-free wheel each pass
 
 The full task still depends on reviewed native ACD and component L5X output. A component-name conflict and import into an already dirty project remain untested. No subsequent task is marked Ready.
 
+## 2026-11-25 · LPM-040 · In progress · Codex on `main`
+
+Hardened failure reporting across the saved-project reader, sharing helper, Custom Tools XML parser and SDK worker. Malformed XML reports a position when available. Prohibited declarations and unsupported encodings have fixed messages. The server discards worker output, maps exit status to a setup or retry hint and opens the SDK project without a file event logger. The [README](../../README.md#check-the-installation) covers retrying the selected file.
+
+Windows stdio tests exercised corrected XML, a released byte-range lock, a selected file replaced by a symbolic link, and an occupied linked export destination. The same connection handled the subsequent valid request. Helper tests checked preservation of an existing selection and menu configuration. Worker tests checked timeout, cancellation, unexpected exit, cleanup and retry. A separate SDK-free MCP call on the synthetic ACD returned wheel installation guidance.
+
+On Windows 11 with Python 3.12.10 and Rockwell SDK 2.0.2, the 40-test native-enabled run passed, including the revision 38.02 ACD read and documentation L5X reopen. The additional link test, updated Custom Tools tests and a separate revision 38.02 L5K read passed. The ACD and L5K retained their source hashes. The SDK-free wheel passed 39 of 41 tests with the two native-only checks skipped. Both environments passed `pip check`.
+
+LPM-040 stays open for failure handling on the native staged outputs tracked by LPM-033. No downstream task meets all its board dependencies yet.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.

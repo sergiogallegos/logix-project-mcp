@@ -10,6 +10,8 @@ python -m unittest discover -s tests -v
 
 The default test suite starts a real local MCP process and verifies tool schemas, capabilities, reads, exports, and errors with a synthetic project. It checks that an occupied export destination survives a request, including when the file appears while an export is in progress. It also exercises concurrent reads, source changes, cancellation, and timeout recovery with a stand-in SDK subprocess. To build a distributable wheel, run `python -m pip wheel --no-deps --wheel-dir dist .`.
 
+Failure-recovery tests use the same MCP connection before and after an invalid XML declaration, unsupported encoding, locked Windows file, linked source or occupied export path. The sharing helper also checks that a rejected document preserves the previous selection. Worker tests check each failure status and verify that diagnostic text written by the child stays out of the client response.
+
 Proposal tests verify the documentation-only preview and content identity through MCP stdio, with duplicate scoped names, modified previews, stale saved bytes, unsupported operations, and selection refresh or switching. The optional native smoke test also checks proposal preview and validation without modifying the sample.
 
 Documentation-copy tests cover creation, replacement, and removal of existing component descriptions, exact preservation of unrelated XML bytes, staged artifact fingerprints, invalid encoding, changed source and selection during staging, and destination collisions. These are SDK-free L5X checks, not Studio 5000 import verification.

@@ -47,7 +47,7 @@ On the Windows 11 build 26200 and SDK wheel 2.0.2 setup above, one MCP session r
 
 | Case | Observed outcome |
 | --- | --- |
-| Rockwell `DayOfWeek.ACD` at revision 26.00, below Rockwell's native support range | `get_project` returned an SDK `SetRSLinxEdition` error on this host. |
+| Rockwell `DayOfWeek.ACD` at revision 26.00, below Rockwell's native support range | The original compatibility run observed the SDK error `SetRSLinxEdition`. Current clients receive a general SDK export failure with revision and installation guidance. |
 | Revision 38.02 `.ACD` with the Rockwell Python wheel absent from the MCP environment | `get_project` returned wheel installation guidance. `logix-project-mcp-doctor --project` identified the missing wheel and exited with code 1. |
 
 Both rejected files kept their original hashes. The missing-wheel check ran on a Windows host with Studio 5000 and the SDK service installed.

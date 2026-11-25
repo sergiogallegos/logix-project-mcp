@@ -101,8 +101,12 @@ def install_values(pythonw: Path, selection_file: Path) -> dict[str, str]:
 def update_xml(original: bytes, values: dict[str, str] | None) -> bytes | None:
     try:
         document = safe_xml.parseString(original, forbid_dtd=True)
-    except (ExpatError, DefusedXmlException) as exc:
-        raise MenuError(f"Invalid Custom Tools XML: {exc}") from exc
+    except DefusedXmlException as exc:
+        raise MenuError("Custom Tools XML contains a prohibited XML declaration.") from exc
+    except ExpatError as exc:
+        raise MenuError(f"Malformed Custom Tools XML at line {exc.lineno}, column {exc.offset}.") from exc
+    except (LookupError, ValueError) as exc:
+        raise MenuError("Custom Tools XML uses an unsupported encoding.") from exc
     root = document.documentElement
     if root.tagName != "CustomToolsContent" or root.getAttribute("SchemaRevision") != "1.0":
         raise MenuError("Expected a CustomToolsContent XML configuration with schema revision 1.0.")

@@ -6,6 +6,8 @@
 
 Follow the [agent workflow](README.md) and record acceptance evidence in the [handoff log](handoff.md). Each task links to its deliverable and verification criteria.
 
+[LPM-040](tasks.md#lpm-040) covers recovery on the existing inspection, sharing and L5X export paths. Hardening for reviewed native outputs depends on LPM-033.
+
 | Task | Deliverable | Depends on | Status | Owner |
 | --- | --- | --- | --- | --- |
 | [LPM-000](tasks.md#lpm-000) | Python MCP and read-only baseline | — | Done | — |
@@ -31,7 +33,7 @@ Follow the [agent workflow](README.md) and record acceptance evidence in the [ha
 | [LPM-034](tasks.md#lpm-034) | Logix verification and preservation checks | LPM-003, LPM-033 | In progress | Codex on `main` |
 | [LPM-035](tasks.md#lpm-035) | Local review, approval, and artifact finalization | LPM-030, LPM-034 | In progress | Codex on `main` |
 | [LPM-023](tasks.md#lpm-023) | Open or import reviewed artifacts in Studio 5000 | LPM-022, LPM-035 | In progress (full L5X handoff) | Codex on `main` |
-| [LPM-040](tasks.md#lpm-040) | Failure recovery, file boundaries, and diagnostics | LPM-002, LPM-021, LPM-033 | Planned | — |
+| [LPM-040](tasks.md#lpm-040) | Failure recovery, file boundaries, and diagnostics | LPM-002, LPM-021, LPM-033 | In progress | Codex on `main` |
 | [LPM-041](tasks.md#lpm-041) | Large-project performance and reliability | LPM-013, LPM-014, LPM-016, LPM-040 | Planned | — |
 | [LPM-042](tasks.md#lpm-042) | Packaging, clean installs, and release CI | LPM-001, LPM-022, LPM-035, LPM-040 | Planned | — |
 | [LPM-043](tasks.md#lpm-043) | End-to-end engineer acceptance | LPM-003, LPM-023, LPM-041, LPM-042 | Planned | — |

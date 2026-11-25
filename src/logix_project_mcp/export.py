@@ -8,9 +8,7 @@ import sys
 from pathlib import Path, PureWindowsPath
 from tempfile import TemporaryDirectory
 from typing import Annotated, Literal, TypedDict, cast
-from xml.etree.ElementTree import ParseError
 
-from defusedxml.common import DefusedXmlException
 from pydantic import ConfigDict, Field
 
 from .project import (
@@ -133,17 +131,14 @@ async def export_saved_project(
             snapshot = output if copy_l5x else Path(temporary) / f"source{source.suffix}"
             fingerprint = await snapshot_source(source, snapshot)
             if source_is_l5x:
-                try:
-                    root = await finish_file_operation(asyncio.to_thread(parse_l5x, snapshot))
-                    controller_from_l5x(root)
-                except (ParseError, DefusedXmlException) as exc:
-                    raise ProjectReadError("invalid_project", f"Could not read {source.name}: {exc}") from exc
+                root = await finish_file_operation(asyncio.to_thread(parse_l5x, snapshot))
+                controller_from_l5x(root)
             if not copy_l5x:
                 selector = component_xpath(component) if component is not None else None
                 await export_snapshot(snapshot, output, source.name, selector)
                 try:
                     await finish_file_operation(asyncio.to_thread(validate_artifact, output, component))
-                except (ParseError, DefusedXmlException, OSError) as exc:
+                except OSError as exc:
                     raise ProjectReadError("export_failed", "The SDK output is missing or could not be read.") from exc
                 except ProjectReadError as exc:
                     raise ProjectReadError("export_failed", str(exc)) from exc
@@ -158,7 +153,7 @@ async def export_saved_project(
                     "destination_exists", f"{filename} already exists in the selected export directory."
                 ) from exc
     except OSError as exc:
-        raise ProjectReadError("export_failed", f"Could not export {filename}: {exc}") from exc
+        raise ProjectReadError("export_failed", f"Could not publish {filename}. Check the export directory's write access and free space.") from exc
 
     return {
         "path": str(destination),

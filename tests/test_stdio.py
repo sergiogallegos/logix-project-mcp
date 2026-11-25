@@ -102,6 +102,44 @@ class StdioTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(set(exports.iterdir()), {existing, unrelated, output})
             self.assertFalse((home / "Elsewhere.L5X").exists())
 
+    async def test_linked_files_and_retry_in_one_session(self):
+        with TemporaryDirectory() as directory:
+            home = Path(directory)
+            project = home / "Selected.L5X"
+            project.write_bytes(PROJECT)
+            saved = home / "Saved.L5X"
+            saved.write_bytes(PROJECT)
+            exports = home / "Exports"
+            exports.mkdir()
+            destination = exports / "Copy.L5X"
+            try:
+                destination.symlink_to(saved)
+            except OSError as exc:
+                if getattr(exc, "winerror", None) == 1314:
+                    self.skipTest("Windows account cannot create symbolic links")
+                raise
+            server = StdioServerParameters(command=sys.executable, args=[
+                "-m", "logix_project_mcp.server", "--project", str(project), "--export-dir", str(exports),
+            ])
+            async with stdio_client(server) as streams, ClientSession(*streams) as client:
+                await client.initialize()
+                tools = {tool.name: tool for tool in (await client.list_tools()).tools}
+                schema = tools["get_project"].meta["logix-project-mcp/error-schema"]
+                self.assertFalse((await client.call_tool("get_project")).isError)
+                project.unlink()
+                project.symlink_to(saved)
+                self.assert_tool_error(await client.call_tool("get_project"), "project_unavailable", schema)
+                project.unlink()
+                project.write_bytes(PROJECT)
+                args = {"filename": destination.name}
+                self.assert_tool_error(await client.call_tool("export_project", args), "destination_exists", schema)
+                self.assertTrue(destination.is_symlink())
+                destination.unlink()
+                result = await client.call_tool("export_project", args)
+                self.assertFalse(result.isError, result.content)
+                self.assertEqual(destination.read_bytes(), PROJECT)
+                self.assertEqual(saved.read_bytes(), PROJECT)
+
     async def test_inspect_selected_project_without_modifying_it(self):
         with TemporaryDirectory() as directory:
             project = Path(directory) / "Sample.L5X"
@@ -196,9 +234,27 @@ class StdioTests(unittest.IsolatedAsyncioTestCase):
                 self.assertFalse(capabilities_after_removal.isError, capabilities_after_removal.content)
                 self.assertEqual(capabilities_after_removal.structuredContent, capabilities.structuredContent)
 
-                project.write_bytes(b"<RSLogix5000Content>")
-                malformed = await client.call_tool("get_project")
-                self.assert_tool_error(malformed, "invalid_project", error_schema)
+                for data, message in (
+                    (b"<RSLogix5000Content>", "line 1"),
+                    (b"<!DOCTYPE PrivateSample>" + PROJECT, "prohibited XML declaration"),
+                    (b'<?xml version="1.0" encoding="PrivateSample"?>' + PROJECT, "unsupported encoding"),
+                ):
+                    with self.subTest(message=message):
+                        project.write_bytes(data)
+                        malformed = await client.call_tool("get_project")
+                        self.assert_tool_error(malformed, "invalid_project", error_schema)
+                        self.assertIn(message, malformed.content[0].text)
+                        self.assertNotIn("PrivateSample", malformed.content[0].text)
+
+                if sys.platform == "win32":
+                    import msvcrt
+
+                    project.write_bytes(PROJECT)
+                    with project.open("r+b") as locked:
+                        msvcrt.locking(locked.fileno(), msvcrt.LK_NBLCK, 1)
+                        unavailable = await client.call_tool("get_project")
+                        self.assert_tool_error(unavailable, "project_unavailable", error_schema)
+                        self.assertNotIn(str(project.parent), unavailable.content[0].text)
 
                 saved = PROJECT.replace(b'Name="Sample"', b'Name="Updated"')
                 project.write_bytes(saved)

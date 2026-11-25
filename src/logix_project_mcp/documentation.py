@@ -8,11 +8,9 @@ from hashlib import sha256
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Literal
-from xml.etree.ElementTree import Element, ParseError
+from xml.etree.ElementTree import Element
 from xml.parsers import expat
 from xml.sax.saxutils import escape
-
-from defusedxml.common import DefusedXmlException
 
 from .project import (
     ProjectReadError, ProjectSnapshot, controller_from_l5x, finish_file_operation,
@@ -193,10 +191,10 @@ async def stage_documentation_copy(
                     os.link(staged, destination)
             except FileExistsError as exc:
                 raise ProjectReadError("destination_exists", f"{filename} already exists in the selected export directory.") from exc
-    except (ParseError, DefusedXmlException, expat.ExpatError) as exc:
+    except expat.ExpatError as exc:
         raise ProjectReadError("invalid_project", "The saved or staged L5X is not valid XML.") from exc
     except OSError as exc:
-        raise ProjectReadError("export_failed", f"Could not stage {filename}: {exc}") from exc
+        raise ProjectReadError("export_failed", f"Could not stage {filename}. Check write access and free space.") from exc
     return {
         "path": str(destination), "format": "l5x", "source": proposal["source"],
         "approval_id": expected_approval_id, "artifact_sha256": artifact_digest,
@@ -249,7 +247,7 @@ async def verify_documentation_copy(
                 raise ProjectReadError("artifact_changed", "The documentation artifact changed during verification.")
             if current_selection() != selection:
                 raise ProjectReadError("selection_changed", "The shared project selection changed during artifact verification.")
-    except (ParseError, DefusedXmlException, expat.ExpatError) as exc:
+    except expat.ExpatError as exc:
         raise ProjectReadError("invalid_project", "The saved project XML is not valid.") from exc
     except OSError as exc:
         raise ProjectReadError("artifact_unavailable", "The temporary verification copies could not be read.") from exc

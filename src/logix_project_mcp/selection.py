@@ -90,5 +90,5 @@ def publish_selection(file: Path, path: Path) -> ProjectSelection:
             if staged is not None:
                 staged.unlink(missing_ok=True)
     except OSError as exc:
-        raise ProjectReadError("invalid_selection", f"Could not update the shared selection: {exc}") from exc
+        raise ProjectReadError("invalid_selection", "Could not update the shared selection. Check write access and retry.") from exc
     return selection

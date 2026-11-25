@@ -24,6 +24,7 @@ class SelectionTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(process.returncode, 0, stderr.decode(errors="replace"))
             return json.loads(stdout)
         self.assertNotEqual(process.returncode, 0)
+        return stderr.decode(errors="replace")
 
     async def test_local_helper_switches_and_refreshes_one_running_session(self):
         with TemporaryDirectory() as directory:
@@ -80,6 +81,10 @@ class SelectionTests(unittest.IsolatedAsyncioTestCase):
                 invalid = folder / "Invalid.L5X"
                 invalid.write_bytes(b"<invalid/>")
                 await self.share(selection_file, invalid, success=False)
+                invalid.write_bytes(b"<!DOCTYPE PrivateSample>" + PROJECT)
+                diagnostic = await self.share(selection_file, invalid, success=False)
+                self.assertIn("prohibited XML declaration", diagnostic)
+                self.assertNotIn("PrivateSample", diagnostic)
                 self.assertEqual(selection_file.read_bytes(), state)
 
                 changed = PROJECT.replace(b'Name="Sample"', b'Name="Updated"').replace(b'38.00', b'38.02')

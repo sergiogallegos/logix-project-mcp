@@ -128,6 +128,19 @@ class WorkerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(failure.exception.code, "sdk_timeout")
         await self.check_recovery()
 
+    async def test_worker_failure_reports_status_and_recovers(self):
+        for code, hint in ((20, "Python wheel"), (21, "DOTNET_ROOT"), (22, "project revision"), (7, "code 7")):
+            with self.subTest(code=code):
+                self.script = f"import sys; print('private diagnostic marker', file=sys.stderr); sys.exit({code})"
+                with self.assertRaises(reader.ProjectReadError) as error:
+                    await reader.read_project(self.source)
+                self.assertEqual(error.exception.code, "sdk_error")
+                self.assertIn(hint, str(error.exception))
+                self.assertNotIn("private diagnostic marker", str(error.exception))
+                self.assertFalse(self.snapshots[-1].parent.exists())
+        self.script = "import shutil, sys; shutil.copyfile(sys.argv[1], sys.argv[2])"
+        self.assertEqual((await reader.read_project(self.source)).source_sha256, sha256(PROJECT).hexdigest())
+
     async def test_mcp_style_cancellation_reaps_worker_and_next_read_succeeds(self):
         with CancelScope() as request:
             self.on_launch = lambda: asyncio.get_running_loop().call_soon(request.cancel)

@@ -8,6 +8,7 @@ from collections import OrderedDict
 from collections.abc import Coroutine
 from contextlib import suppress
 from hashlib import sha256
+from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any, BinaryIO, Literal, NamedTuple, get_args
@@ -16,6 +17,8 @@ from xml.etree.ElementTree import Element, ParseError
 from anyio import CancelScope
 from defusedxml import ElementTree
 from defusedxml.common import DefusedXmlException
+
+from ._sdk_worker import WorkerFailure
 
 ProjectFormat = Literal["acd", "l5k", "l5x"]
 PROJECT_EXTENSIONS = {f".{format_name}" for format_name in get_args(ProjectFormat)}
@@ -106,9 +109,7 @@ async def read_project(path: Path, cache: NativeSnapshotCache | None = None) -> 
             else:
                 root = await finish_file_operation(asyncio.to_thread(parse_l5x, snapshot))
     except OSError as exc:
-        raise ProjectReadError("project_unavailable", f"Could not read {path.name}: {exc}") from exc
-    except (ParseError, DefusedXmlException) as exc:
-        raise ProjectReadError("invalid_project", f"Could not read {path.name}: {exc}") from exc
+        raise ProjectReadError("project_unavailable", "Could not create or read the temporary project snapshot.") from exc
 
     controller = controller_from_l5x(root)
     if cache is not None and cache_key is not None and export_bytes is not None:
@@ -134,7 +135,7 @@ async def snapshot_source(path: Path, snapshot: Path) -> str:
             f"{path.name} changed while it was being copied. Retry after the save completes."
         ) from exc
     except OSError as exc:
-        raise ProjectReadError("project_unavailable", f"Could not read {path.name}: {exc}") from exc
+        raise ProjectReadError("project_unavailable", f"Could not read {path.name}. Check file access and retry.") from exc
 
 
 async def finish_file_operation[T](operation: Coroutine[Any, Any, T]) -> T:
@@ -187,43 +188,48 @@ def copy_snapshot(path: Path, snapshot: Path) -> str:
     return fingerprint
 
 
-def parse_l5x(path: Path) -> Element:
-    return ElementTree.parse(path, forbid_dtd=True).getroot()
+def parse_l5x(source: Path | BinaryIO) -> Element:
+    try:
+        return ElementTree.parse(source, forbid_dtd=True).getroot()
+    except DefusedXmlException as exc:
+        raise ProjectReadError("invalid_project", "The saved XML contains a prohibited XML declaration.") from exc
+    except ParseError as exc:
+        line, column = exc.position
+        raise ProjectReadError("invalid_project", f"Malformed XML at line {line}, column {column}.") from exc
+    except (LookupError, ValueError) as exc:
+        raise ProjectReadError("invalid_project", "The saved XML uses an unsupported encoding.") from exc
 
 
 def parse_l5x_bytes(data: bytes) -> Element:
-    return ElementTree.fromstring(data, forbid_dtd=True)
+    return parse_l5x(BytesIO(data))
 
 
 async def export_snapshot(snapshot: Path, output: Path, source_name: str, component_xpath: str | None = None) -> None:
     selector = (component_xpath,) if component_xpath is not None else ()
-    with output.with_suffix(".stderr").open("w+b") as stderr:
-        # File-backed diagnostics let process exit be observed independently of pipe EOF.
-        with CancelScope(shield=True):
-            process = await asyncio.create_subprocess_exec(
-                sys.executable, "-m", "logix_project_mcp._sdk_worker", str(snapshot), str(output), *selector,
-                stdin=asyncio.subprocess.DEVNULL,
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=stderr,
-            )
-        try:
-            async with asyncio.timeout(SDK_TIMEOUT_SECONDS):
+    with CancelScope(shield=True):
+        process = await asyncio.create_subprocess_exec(
+            sys.executable, "-m", "logix_project_mcp._sdk_worker", str(snapshot), str(output), *selector,
+            stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL,
+        )
+    try:
+        async with asyncio.timeout(SDK_TIMEOUT_SECONDS):
+            await process.wait()
+    except TimeoutError as exc:
+        raise ProjectReadError(
+            "sdk_timeout",
+            f"Logix Designer SDK did not finish exporting {source_name} within {SDK_TIMEOUT_SECONDS} seconds."
+        ) from exc
+    finally:
+        if process.returncode is None:
+            with suppress(ProcessLookupError):
+                process.kill()
+            with CancelScope(shield=True):
                 await process.wait()
-        except TimeoutError as exc:
-            raise ProjectReadError(
-                "sdk_timeout",
-                f"Logix Designer SDK did not finish exporting {source_name} "
-                f"within {SDK_TIMEOUT_SECONDS} seconds."
-            ) from exc
-        finally:
-            if process.returncode is None:
-                with suppress(ProcessLookupError):
-                    process.kill()
-                with CancelScope(shield=True):
-                    await process.wait()
 
-        if process.returncode:
-            stderr.seek(0)
-            detail = stderr.read(8192).decode("utf-8", errors="replace").strip()
-            detail = detail or f"worker exited with code {process.returncode}"
-            raise ProjectReadError("sdk_error", f"Logix Designer SDK could not export {source_name}: {detail}")
+    if process.returncode:
+        hint = {
+            WorkerFailure.SDK_IMPORT: "Check that Rockwell's Python wheel is installed in the server environment.",
+            WorkerFailure.RUNTIME_LOAD: "Check the .NET runtime and DOTNET_ROOT in the MCP client configuration.",
+            WorkerFailure.EXPORT: "Check the project revision and SDK installation with logix-project-mcp-doctor.",
+        }.get(process.returncode, f"The SDK worker exited unexpectedly with code {process.returncode}. Retry the request.")
+        raise ProjectReadError("sdk_error", f"Logix Designer SDK could not export {source_name}. {hint}")
