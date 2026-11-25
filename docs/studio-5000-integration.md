@@ -78,6 +78,24 @@ On the same Windows and SDK setup used for the desktop walkthrough, the helper s
 
 The same helper and MCP selection mode read a 38.02 saved `.L5K` and returned its matching source hash. The SDK-free wheel's sharing command also validated and selected a full `.L5X`.
 
+## Connect Codex
+
+From a normal Windows PowerShell in the repository, after completing the Python and SDK setup, register the stdio server with the installed Codex CLI. Use a selection file in your own Windows profile rather than a project-specific or temporary directory. The `ProgramFiles` environment entry makes the installed .NET runtime discoverable to the native SDK worker.
+
+```powershell
+$selection = Join-Path $env:LOCALAPPDATA 'logix-project-mcp\selection.json'
+$python = (Resolve-Path '.venv/Scripts/python.exe').Path
+codex mcp add logix-project-mcp --env "ProgramFiles=$env:ProgramFiles" -- $python -m logix_project_mcp.server --selection-file $selection
+codex mcp list
+codex mcp get logix-project-mcp
+```
+
+The registration persists in your Codex configuration. Allow extra time for the first SDK export of a saved `.ACD` or `.L5K`: in the existing `[mcp_servers.logix-project-mcp]` section of `~/.codex/config.toml`, set `tool_timeout_sec = 120`. Unchanged native snapshots are cached within a connected server session. See the [Codex MCP configuration documentation](https://learn.chatgpt.com/docs/extend/mcp?surface=cli) for configuration details.
+
+Use that same absolute selection file when [installing the Studio 5000 menu](#install-send-current-project-to-agent) or [sharing manually](#share-and-refresh). If you use a different administrator account for menu installation, pass the original user's selection path explicitly. Open a new Codex session after registration, share a saved project, and ask Codex to use `logix-project-mcp`'s `get_project` tool to identify it. Share another saved project to change the selection without editing the MCP configuration. If the menu was previously installed with a different selection file, save your work and reopen Logix Designer to load the updated command. The selection persists across Codex sessions and Windows restarts.
+
+The registration configures saved-project inspection only. It does not establish an online controller connection. If no project has been shared, use the menu or manual picker before requesting an inspection.
+
 ## Install Send Current Project to Agent
 
 Configure the MCP client for shared selection as described above. Note the absolute `--selection-file` path from that configuration. Close the Logix Designer editor windows before changing the shared Custom Tools configuration so that the next launch loads the new entry. Run the following from an administrator PowerShell in the repository, using the actual selection path from your MCP client.

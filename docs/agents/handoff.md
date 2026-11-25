@@ -94,6 +94,12 @@ Brought native snapshot caching forward following the maintainer's reported 30�
 
 On Windows 11 build 26200 with Python 3.12.10 x64 and SDK wheel 2.0.2, a synthetic revision 38.02 `.ACD` took 30.431 s on the first MCP read and 0.160 s on a repeat. A changed sample required 30.756 s for a fresh export and subsequently 0.142 s. `.L5K` took 34.907 s cold and 0.137 s warm. All fingerprints matched the saved source. The SDK-free wheel passed the 23-test suite with the optional native test skipped, and `pip check` passed. The [compatibility notes](../compatibility.md#native-snapshot-cache-measurements) record the measured scope. LPM-024 is next.
 
+## 2026-11-24 · LPM-024 · Done · Codex on `main`
+
+Registered the local stdio server with Codex CLI 0.172.0 using the permanent per-user selection JSON, explicit Python environment and `ProgramFiles` environment entry. Set a 120-second tool timeout and installed the Studio 5000 menu using the same selection path. The previous selection was preserved and the installer backed up the prior menu configuration. Existing editor windows must be reopened to load the updated menu. The [direct registration walkthrough](../studio-5000-integration.md#connect-codex) documents setup and manual sharing without user-specific paths.
+
+On Windows 11 build 26200 with Python 3.12.10 x64 and Rockwell SDK wheel 2.0.2, a new Codex conversation used the registered MCP server with only its selection path overridden to a scratch JSON. Actual MCP calls to `get_capabilities` and two `get_project` calls succeeded for a synthetic revision 38.02 `.ACD`. Both returned the same SHA-256, independently matched against the saved source file. The sharing helper then selected a full synthetic `.L5X`; resuming the same Codex conversation returned the new selection ID, format and independently verified source hash. No customer project was used for these inspection tests. LPM-030 is next in board order, and LPM-050 is now ready.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.

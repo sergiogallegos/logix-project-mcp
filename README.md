@@ -77,6 +77,8 @@ To enable export, add `--export-dir` followed by an existing directory you choos
 
 ### Share a project from Windows
 
+For Codex, use the [direct registration walkthrough](docs/studio-5000-integration.md#connect-codex) to configure the local server once with a persistent selection file. Open a new Codex session after registration.
+
 To switch projects in an existing MCP connection, replace `--project` and its path with `--selection-file` and an absolute JSON path chosen by you, for example `C:/Users/YourName/AppData/Local/logix-project-mcp/selection.json`. Use the same path when launching the local helper. The helper creates the selection file on the first successful share.
 
 ```powershell
