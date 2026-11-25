@@ -15,6 +15,7 @@ Call `tools/list` to discover the JSON Schema for each tool's arguments and succ
 | `find_references` | Required `name`. Optional `kind`, `program`, and [paging arguments](#scoped-search-and-cross-references). | Saved source identity, `matches`, and `next_offset` |
 | `preview_change_proposal` | Required `expected_source_sha256`, `operations`, and in shared mode `expected_selection_id` | [Typed documentation preview](#offline-change-proposals), source identity, and `approval_id` |
 | `validate_change_proposal` | Required `proposal`, `expected_approval_id` | `valid: true`, source identity, and checked `approval_id` |
+| `preview_tag_edit` | Required `expected_source_sha256`, `change`, and in shared mode `expected_selection_id` | Source identity, change, tag state before and after, data type and `approval_id` for [local tag review](#private-dint-tag-edits) |
 | `create_documentation_copy` | Required `proposal`, `expected_approval_id`, and new `.L5X` `filename` when an export directory is configured | [Documentation-only artifact](#documentation-copy), source identity, approval identity, and artifact SHA-256 |
 | `verify_documentation_copy` | Required `proposal`, `expected_approval_id`, existing `.L5X` `filename`, and `expected_artifact_sha256` when an export directory is configured | Artifact identity and `valid: true`, `verification: "exact_documentation_copy"`, `vendor_verification: "not_performed"` |
 | `compare_projects` | Optional `scope` when a candidate was [selected at launch](#project-comparison) | `before`, `after`, scoped `changes`, and `protected_components` |
@@ -132,6 +133,30 @@ The documentation workflow rejects exports containing recognized safety-class, s
 The response includes `schema_version: 1`, `source` (absolute path, nullable selection ID, SHA-256, controller name and software revision), normalized `operations`, and ordered `preview` entries with explicit `before` and `after` values. The `approval_id` is the SHA-256 of the ASCII JSON encoding of those fields, with sorted keys, no insignificant whitespace, and non-ASCII characters escaped.
 
 Present the complete proposal to the reviewer and retain its approval identity independently. To check a previously reviewed proposal, send the unchanged proposal and that retained value as `expected_approval_id` to `validate_change_proposal`. Validation re-reads the selected saved project and rebuilds the entire preview; changes to the source bytes, selection, target, operation, before/after text, or identity are rejected. A successful check confirms content consistency at inspection time, not authorization or a guarantee against subsequent saves. The identity is a digest, not a signature or proof of human approval. No edit or artifact is materialized by either preview or validation.
+
+## Private DINT tag edits
+
+Select a saved full UTF-8 L5X and call `get_project`. Provide its hash and, in shared mode, its selection ID to `preview_tag_edit`. Omit `program` for controller scope. For program scope, use the name returned by `get_project`. The selected scope must contain an exported `Tags` collection.
+
+| Operation | Example `change` |
+| --- | --- |
+| Create | `{"operation":"create","program":"MainProgram","name":"ReviewCounter","value":0}` |
+| Update saved value | `{"operation":"set_value","program":"MainProgram","name":"ReviewCounter","value":17}` |
+| Rename | `{"operation":"rename","program":"MainProgram","name":"ReviewCounter","new_name":"ReviewCount"}` |
+| Remove | `{"operation":"remove","program":"MainProgram","name":"ReviewCount"}` |
+
+Each preview covers one operation. Supported tags are local, nonconstant scalar DINT base tags with decimal radix, external access `None` and no OPC UA access. Values range from −2,147,483,648 to 2,147,483,647. L5K and decorated scalar representations must agree when both are present. New tags include both. A plain tag description is shown in the preview and retained across updates and renames. Removal includes the tag's description.
+
+The reference check rejects case-insensitive occurrences of either affected name in other saved declarations or possible references, including aliases and routine text. A same-named declaration in another scope can block an edit. The check can also flag an unrelated text match. Recognized safety or opaque protected content prevents a tag edit. External systems and vendor build validity are outside this saved-file check. [Rockwell name and scope-conflict guidance](https://www.rockwellautomation.com/en-ie/docs/studio-5000-logix-designer/38-03/contents-ditamap/studio-5000-logix-designer/tag-editor-and-data-monitor/troubleshoot-tags/couldn-t-set-tag--tagname--name.html)
+
+Save the preview's exact `structuredContent` as `tag-proposal.json` and retain the `approval_id` from the preview. Open an interactive terminal and choose a new output path in an existing directory. For a shared selection, supply the original `--selection-file` in place of `--project`.
+
+```powershell
+$approvalId = Read-Host 'Approval ID retained from preview'
+.\.venv\Scripts\logix-project-mcp-review-tag.exe --project 'C:\Samples\Baseline.L5X' --proposal tag-proposal.json --approval-id $approvalId 'C:\Reviews\TagEdit.L5X'
+```
+
+The command rebuilds the preview against the saved source, stages the change, reparses the result, and displays the exact output path and hash. Enter `APPROVE` to publish the copy. A decline exits with code 2. A competing destination, changed source, or changed shared selection prevents publication. Retain the successful JSON receipt for its proposal, path and artifact SHA-256. To edit the resulting tag again, select the new copy and obtain a new preview.
 
 ## Documentation copy
 

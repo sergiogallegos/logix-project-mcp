@@ -208,6 +208,16 @@ The SDK-free doctor identified the missing Rockwell wheel when given a native sa
 
 Documentation for the current development wheel is ready. LPM-044 remains open for the final format matrix and release notes after LPM-043 engineer acceptance and the reviewed native/component handoff. LPM-045 publication remains planned.
 
+## 2026-11-25 · LPM-031 · Done for supported tags · Codex on `main`
+
+Added a read-only MCP preview and a local interactive publisher for one private decimal DINT tag in a full UTF-8 L5X. Controller and program scopes support create, saved value update, rename and remove. The preview ties the exact change to the selected save. The publisher reconstructs it, checks the staged declaration, displays the destination and artifact hash, and rechecks the source and selection after approval. Existing files are preserved. [Supported declarations, collisions and command](../mcp-contract.md#private-dint-tag-edits)
+
+Synthetic stdio and local review tests exercised all four operations, DINT bounds, case-insensitive collisions, possible references, mismatched data representations, changed selection and source, decline and a competing output. A program-tag sequence returned the entire export to its original bytes after removal. A separate test checked preservation of CDATA descriptions, whitespace and both saved value representations.
+
+On Windows with Python 3.12.10 and SDK wheel 2.0.2, the SDK reopened a synthetic revision 38.02 copy containing a new controller tag with value −17. In a second run, Codex acted as test operator at the installed review command. The SDK reopened the resulting program tag `MainProgram.McpScratchCount` with value 42, and an MCP client listed it under the expected program on the SDK re-export. The reviewed copy and source hashes matched the receipt after readback.
+
+LPM-031 covers this supported DINT subset and the earlier description operations. Other tag types, access modes, reference rewriting and direct native output are outside its verified scope. LPM-032 is the next unfinished implementation task.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.

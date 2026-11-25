@@ -16,7 +16,9 @@ Start with the [first project read](#quick-start) to check your installation. Fo
 | `.L5K` | Imports a temporary copy with the same SDK and inspects its `.L5X` export |
 | `.L5X` | Parses a temporary copy of a full project export without the Rockwell SDK |
 
-Each inspection tool takes a fresh snapshot of the selected saved file. Its successful structured response includes `source_sha256`, the SHA-256 of the saved bytes used for that read. Use it to match results from the same saved version. If the file changes during copying, retry after the save completes. The [Windows sharing helper](docs/studio-5000-integration.md#share-and-refresh) can change the selection in a running MCP session from the Studio 5000 Tools menu. Documentation-only changes can be [previewed and validated](docs/mcp-contract.md#offline-change-proposals) against the saved project and written to a separate UTF-8 full `.L5X` copy when export is enabled. Editing tag definitions, values, routine logic, and native project files is not implemented.
+Each inspection tool takes a fresh snapshot of the selected saved file. Its successful structured response includes `source_sha256`, the SHA-256 of the saved bytes used for that read. Use it to match results from the same saved version. If the file changes during copying, retry after the save completes. The [Windows sharing helper](docs/studio-5000-integration.md#share-and-refresh) can change the selection in a running MCP session from the Studio 5000 Tools menu. Documentation changes can be [previewed and validated](docs/mcp-contract.md#offline-change-proposals) and written to a separate UTF-8 full L5X when export is enabled.
+
+For an unused, private decimal DINT in controller or program scope, preview creation, a saved value change, rename, or removal through MCP. The installed local review command displays the before/after values and writes a new full L5X on approval. [Offline tag edit walkthrough](docs/mcp-contract.md#private-dint-tag-edits)
 
 Native inspections reuse a validated SDK export on subsequent calls in the same MCP session when the selected path and source SHA-256 match. A new save with changed bytes triggers a new export. The cache is bounded and held in memory.
 
@@ -98,6 +100,7 @@ Add a local stdio server in your MCP client. Replace both paths in the `mcpServe
 | `read_routine` | Saved routine source, language-specific sections, and protection status |
 | `search_project` | Scoped declarations, comments, and resolved references matching a query |
 | `find_references` | Locations that refer to a specific declaration, including through alias chains |
+| `preview_tag_edit` | Source-bound before/after preview of one private DINT tag edit for local approval |
 | `preview_change_proposal` | Typed, source-bound before-and-after previews for controller, program, tag, and Ladder/ST routine descriptions, with approval identity |
 | `validate_change_proposal` | Check the reviewed preview and identity against the current saved project |
 | `create_documentation_copy` | A new UTF-8 full `.L5X` copy containing reviewed description changes only, when export is enabled |

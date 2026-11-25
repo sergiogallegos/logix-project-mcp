@@ -8,7 +8,7 @@ Save changes in Studio 5000 before inspecting or exporting a project. The menu s
 | Saved ACD or L5K | Windows with the licensed SDK and matching Studio revision | Full L5X, full L5K or a supported component L5X | Export a full L5X, select that file, then create a fresh proposal against it. |
 | Component L5X | Project selection requires a full controller project | Supported as an export destination for selected components | Local review handles full project L5X artifacts only. |
 
-Supported edits change descriptions on existing controllers, programs, scoped tags, and readable Ladder or Structured Text routines. Direct reviewed ACD output, reviewed component output, tag definition or value edits, and executable logic edits remain open. [Supported operations](mcp-contract.md#offline-change-proposals) · [Recorded Studio import and readback](agents/handoff.md#2026-11-25--lpm-043--in-progress--codex-on-main)
+The full-L5X documentation workflow covers existing controllers, programs, scoped tags, and readable Ladder or Structured Text routines. A separate local review command supports creating, changing the saved value of, renaming, and removing private, unreferenced decimal DINT tags on full UTF-8 L5X copies. The Windows SDK reopened a synthetic revision 38.02 copy containing a newly created controller tag with value −17. Direct reviewed ACD output, reviewed component output, other tag types and executable logic edits remain open. [Tag edit limits](mcp-contract.md#private-dint-tag-edits) · [Description operations](mcp-contract.md#offline-change-proposals) · [Studio documentation import and readback](agents/handoff.md#2026-11-25--lpm-043--in-progress--codex-on-main)
 
 ## Verified reads
 

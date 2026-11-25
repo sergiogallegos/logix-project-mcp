@@ -1,5 +1,11 @@
 # 0.1.0 development notes
 
+### Changes since the verified baseline
+
+Development builds containing `preview_tag_edit` support reviewed create, value update, rename and removal for private decimal DINT tags in a full UTF-8 L5X. Use the local `logix-project-mcp-review-tag` command from the same build. [Supported tags and review procedure](mcp-contract.md#private-dint-tag-edits)
+
+### Baseline for the documentation walkthrough
+
 The verified baseline is commit `532d8df` from November 25, 2026. Development builds share package version `0.1.0`. Identify a tested build by its commit, CI run and wheel SHA-256. The wheel from the run below has SHA-256 `a4756d703c4a121246a7ef0100aa5a98853271c101db2490fb378ca6022ad4b0`. [Source at that commit](https://github.com/sergiogallegos/logix-project-mcp/tree/532d8df) · [CI run and wheel](https://github.com/sergiogallegos/logix-project-mcp/actions/runs/45673077213)
 
 | Workflow | Verification evidence |
@@ -9,4 +15,4 @@ The verified baseline is commit `532d8df` from November 25, 2026. Development bu
 | Inspect, compare and export | Stdio tools expose saved inventory, scoped search and routine source, compare two selected projects and export to new files. The revision 38.02 export checks include SDK reopen and component import. [Tool contract](mcp-contract.md) · [Export evidence](compatibility.md#verified-exports) |
 | Review offline documentation | A synthetic revision 38.02 ACD was shared, exported to a full L5X, and given a reviewed ST routine description. Studio imported the checked L5X into a new ACD. MCP readback confirmed the description and preserved routine sections. L5K and SDK-free L5X inputs also passed the full-L5X review path. [Acceptance evidence and environment](agents/handoff.md#2026-11-25--lpm-043--in-progress--codex-on-main) |
 
-The current editing workflow covers component descriptions in a full UTF-8 L5X. Direct reviewed ACD output, reviewed component handoff, executable logic edits, and engineer sign-off are outstanding. The local review records a decision about the specified artifact. A vendor build and release approval are separate checks. The 1.0 release gate remains open. [Supported edits](compatibility.md) · [Release gate](agents/board.md#10-release-gate)
+The editing workflow at this baseline covers component descriptions in a full UTF-8 L5X. Direct reviewed ACD output, reviewed component handoff, executable logic edits, and engineer sign-off are outstanding. The local review records a decision about the specified artifact. A vendor build and release approval are separate checks. The 1.0 release gate remains open. [Supported edits](compatibility.md) · [Release gate](agents/board.md#10-release-gate)

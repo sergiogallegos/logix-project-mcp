@@ -155,7 +155,7 @@ class StdioTests(unittest.IsolatedAsyncioTestCase):
                 tools = {tool.name: tool for tool in (await client.list_tools()).tools}
                 self.assertEqual(set(tools), {
                     "get_capabilities", "get_inventory", "get_project", "list_tags", "read_routine",
-                    "search_project", "find_references", "preview_change_proposal", "validate_change_proposal",
+                    "search_project", "find_references", "preview_change_proposal", "validate_change_proposal", "preview_tag_edit",
                 })
                 error_schema = tools["get_project"].meta["logix-project-mcp/error-schema"]
                 for tool in tools.values():

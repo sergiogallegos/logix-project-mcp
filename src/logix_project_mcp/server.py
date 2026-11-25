@@ -41,6 +41,7 @@ from .routines import RoutineInspection, inspect_routine
 from .proposals import Operations, Proposal, ProposalValidation, create_proposal, validate_proposal
 from .search import ProjectSearch, SearchKind, SearchMatch, SymbolKind, page
 from .selection import ProjectSelection, SelectionId, SelectionResult, read_selection, validate_project_path
+from .tag_edits import TagChange, TagPreview, preview_tag
 
 READ_ONLY = ToolAnnotations(readOnlyHint=True, idempotentHint=True, openWorldHint=False)
 EXPORT_WRITE = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False)
@@ -116,6 +117,12 @@ class PreviewProposalArguments(ToolArguments):
 class ValidateProposalArguments(ToolArguments):
     proposal: Proposal
     expected_approval_id: SourceHash
+
+
+class TagPreviewArguments(ToolArguments):
+    expected_source_sha256: SourceHash
+    expected_selection_id: NotRequired[SelectionId | None]
+    change: TagChange
 
 
 class DocumentationCopyArguments(ValidateProposalArguments):
@@ -383,6 +390,19 @@ def create_server(
             raise ProjectReadError("project_changed", "Inspect the latest saved project before creating a proposal.")
         return create_proposal(selection, snapshot, operations)
 
+    async def preview_tag_edit(expected_source_sha256: str, change: TagChange, expected_selection_id: str | None = None) -> TagPreview:
+        """Preview an offline private decimal DINT declaration change for local review."""
+        async with project_read_lock:
+            selection = selected()
+            if selection.path.suffix.lower() != ".l5x":
+                raise ProjectReadError("invalid_proposal", "Export and select a full L5X before previewing a tag edit.")
+            if selection.selection_id != expected_selection_id:
+                raise ProjectReadError("selection_changed", "Inspect the current shared selection before previewing a tag edit.")
+            snapshot = await read_project(selection.path)
+        if snapshot.source_sha256 != expected_source_sha256:
+            raise ProjectReadError("project_changed", "Inspect the current saved bytes before previewing a tag edit.")
+        return await asyncio.to_thread(preview_tag, selection, snapshot, change)
+
     async def validate_change_proposal(proposal: Proposal, expected_approval_id: str) -> ProposalValidation:
         """Check a previously reviewed documentation preview against its identity and current saved source. No edits are applied."""
         selection, snapshot = await load()
@@ -428,6 +448,7 @@ def create_server(
         (search_project, SearchArguments, SearchResult),
         (find_references, ReferenceArguments, SearchResult),
         (preview_change_proposal, PreviewProposalArguments, Proposal),
+        (preview_tag_edit, TagPreviewArguments, TagPreview),
         (validate_change_proposal, ValidateProposalArguments, ProposalValidation),
         (get_capabilities, ToolArguments, Capabilities),
     )
