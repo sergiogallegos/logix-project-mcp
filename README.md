@@ -122,6 +122,8 @@ See the [MCP tool contract](docs/mcp-contract.md) for arguments, structured resu
 
 ## Check the installation
 
+To follow a saved sample from sharing through a reviewed routine description and Studio import, use the [offline acceptance walkthrough](docs/engineer-acceptance.md).
+
 Run `logix-project-mcp-doctor` from the same Windows PowerShell session you use to launch your MCP client. Without a project, it reports Python architecture, package versions, standard Logix Designer installations, .NET runtimes, and the local SDK service. Pass a saved sample to test an actual `get_project` call over MCP stdio. You can also invoke it directly from the virtual environment:
 
 ```powershell

@@ -36,6 +36,8 @@ The [inspection benchmark](docs/performance.md#repeat-the-measurements) runs sep
 
 ## Verify Rockwell SDK integration on Windows
 
+The [acceptance runner](docs/engineer-acceptance.md) checks the installed sharing, stdio and review commands together. Its desktop readback step verifies a separate ACD created in Studio.
+
 Install the native prerequisites from [README.md](README.md#requirements). Point the optional SDK smoke test at a Rockwell sample project or another saved copy you are authorized to inspect. Run once per native format you want to verify. The test sends `get_project` twice through MCP stdio, checks both returned fingerprints, and compares the source file hash before and after.
 
 ```powershell

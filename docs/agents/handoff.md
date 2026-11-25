@@ -182,6 +182,22 @@ The wheel downloaded from the linked run had SHA-256 `6466ce0274529b2785378c3f8b
 
 LPM-043 is next in delivery order. Its full engineer acceptance run still depends on LPM-023's reviewed native and component handoff.
 
+## 2026-11-25 · LPM-043 · In progress · Codex on `main`
+
+Exercised the full-project L5X documentation workflow on Windows 11 build 26200 with two fresh Python 3.12.10 environments and the LPM-042 hosted wheel (SHA-256 `6466ce0274529b2785378c3f8baafba10d616ca0a6523b0670b378dd0568d15d`). The desktop already had Logix Designer and the licensed SDK. Only the native environment received the Rockwell 2.0.2 wheel. Both installations passed `pip check`. [Repeat the acceptance run](../engineer-acceptance.md)
+
+| Saved sample (software revision 38.02) | Checks and outcome |
+| --- | --- |
+| Synthetic ACD open in Studio | Shared the saved file via the installed helper, found `MainProgram.InspectText`, and exported a full baseline L5X. Studio imported the reviewed L5X as `McpReviewed.ACD`. An independent stdio read of that ACD returned controller `McpSnapshotSample`, the same revision, ST language and routine sections, and the description `LPM-043 synthetic acceptance note`. |
+| Synthetic L5K | The SDK imported the saved sample. The runner found the same ST routine, verified the single documentation change and reopened the reviewed full L5X over MCP. |
+| Full synthetic L5X | Without the SDK, the runner found `Main.MainRoutine`, created and checked a reviewed copy, and read its description and original logic over MCP. |
+
+Each run rejected an outdated proposal with `selection_changed` before a copy existed, succeeded after a fresh preview, and preserved the original source SHA-256. Codex acted as test operator at the local approval prompts. The ACD source hash was `d4f900f333f132a171a591267e4c7c3c4a11c80ca256f2bbca3b9167700e245e`, the reviewed L5X hash was `ceb063a584b79e9a30d1ffae974994a45cf2fad84394b070dcb8c31d244ab2c2`, and the imported ACD hash was `4f6ce81a60fb25ffe4bcb3608e144e1e514afc5bfb44a1e8036698a46d08066e`. The desktop probe initially timed out. A subsequent attempt captured Studio error `716-80042029` (“Name is invalid”) for `Studio inspection.ACD`. Changing the destination to `McpReviewed.ACD` allowed the import and readback to finish.
+
+All 42 tests passed with the SDK and both optional samples configured. The SDK-free environment passed 40 and skipped the two native tests. The automated regression simulates only the local review decision for a generated fixture. The installed helper was invoked directly while the ACD was open. LPM-022 records the separate menu check.
+
+LPM-043 remains in progress pending LPM-023's reviewed native output and component handoff. Engineer sign-off is outstanding. LPM-044 is next in delivery order once acceptance is complete.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.
