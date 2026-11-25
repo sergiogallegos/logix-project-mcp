@@ -41,7 +41,7 @@ On the Windows 11 build 26200 and SDK wheel 2.0.2 setup above, one MCP session r
 | `.ACD` after replacing the saved bytes with an edited sample | 30.756 s | 0.142 s |
 | `.L5K` `get_project` | 34.907 s | 0.137 s |
 
-`get_inventory` on the first cached `.ACD` took 0.367 s. The edited sample produced the new description and fingerprint, and every response matched the saved source hash. These are measurements of the small synthetic sample, with larger projects covered by the planned performance task. The cached exports are bounded to four entries and 128 MiB combined per server process. Larger individual exports are inspected without caching.
+`get_inventory` on the first cached `.ACD` took 0.367 s. The edited sample produced the new description and fingerprint, and every response matched the saved source hash. The cached exports are bounded to four entries and 128 MiB combined per server process. Larger individual exports are inspected without caching. See the [inspection performance report](performance.md) for workloads with more components and simultaneous clients.
 
 ## Failure cases
 

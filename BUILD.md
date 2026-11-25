@@ -32,6 +32,8 @@ Shared-selection tests launch the packaged sharing module and switch between sam
 
 Custom Tools tests exercise installation, updates, and removal on disposable XML configurations, including repeated operations, backup contents, menu name conflicts, and an intervening file change. Use the [Windows menu walkthrough](docs/studio-5000-integration.md#install-send-current-project-to-agent) for desktop validation.
 
+The [inspection benchmark](docs/performance.md#repeat-the-measurements) runs separately from the test suite. Its SDK-free mode generates both project sizes in a temporary directory. Native mode uses saved sample copies and the installed Windows SDK.
+
 ## Verify Rockwell SDK integration on Windows
 
 Install the native prerequisites from [README.md](README.md#requirements). Point the optional SDK smoke test at a Rockwell sample project or another saved copy you are authorized to inspect. Run once per native format you want to verify. The test sends `get_project` twice through MCP stdio, checks both returned fingerprints, and compares the source file hash before and after.

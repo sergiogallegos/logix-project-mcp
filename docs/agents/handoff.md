@@ -160,6 +160,16 @@ On Windows 11 with Python 3.12.10 and Rockwell SDK 2.0.2, the 40-test native-ena
 
 LPM-040 stays open for failure handling on the native staged outputs tracked by LPM-033. No downstream task meets all its board dependencies yet.
 
+## 2026-11-25 · LPM-041 · Done · Codex on `main`
+
+Added a [repeatable inspection benchmark and host-specific regression targets](../performance.md). The saved-project paths needed for this benchmark have passed LPM-040 recovery checks. LPM-040's remaining native staged-output work is independent of these reads.
+
+On Windows 11, Python 3.12.10 and MCP 1.30.0, the SDK-free wheel searched the larger synthetic L5X (8,192 tags and 16,384 comment lines) in 0.19–0.23 seconds and compared it in 0.75–0.99 seconds. Two independent clients found the same scoped match in 0.27 seconds wall time. The first server peaked at 90.1 MiB.
+
+With Rockwell SDK 2.0.2, the revision 38.02 L5K with 8,192 tags opened in 52.76 seconds and repeated in under 0.28 seconds. The synthetic 38.02 and Rockwell 35.00 ACDs opened in about 30 seconds. For each format, replacing a scratch copy at the same path produced a new hash and summary consistent with an independent cold read. Source hashes matched after the runs.
+
+LPM-042 is next in delivery order. Its full packaging and release checks still depend on LPM-035 and LPM-040, so no downstream task is newly Ready.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.
