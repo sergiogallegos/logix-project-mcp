@@ -2,7 +2,7 @@
 
 **1.0 outcome.** An engineer can select the project they have open in Studio 5000, share its latest saved `.ACD` with an MCP client, inspect and compare the project, review a proposed offline edit, and reopen a validated `.ACD` copy or import the reviewed `.L5X` component into Studio 5000. The server also supports the documented `.L5K` and `.L5X` workflows.
 
-**Current progress.** [LPM-031](tasks.md#lpm-031) and [LPM-032](tasks.md#lpm-032): documentation-only slices are implemented and verified. Reviewed controller, program, scoped tag, and existing Ladder/ST routine descriptions can be created, replaced, or removed in a new full UTF-8 L5X copy. Broader tag and routine operations in the original briefs remain unimplemented.
+**Current progress.** [LPM-031](tasks.md#lpm-031) and [LPM-032](tasks.md#lpm-032): documentation-only slices are implemented and verified. Reviewed controller, program, scoped tag, and existing Ladder/ST routine descriptions can be created, replaced, or removed in a new full UTF-8 L5X copy. Broader tag and routine operations in the original briefs remain unimplemented. [LPM-050](tasks.md#lpm-050), the independent read-only diagnostics feasibility review, is complete. LPM-033 still depends on LPM-031 and LPM-032.
 
 Follow the [agent workflow](README.md) and record acceptance evidence in the [handoff log](handoff.md). Each task links to its deliverable and verification criteria.
 
@@ -37,7 +37,7 @@ Follow the [agent workflow](README.md) and record acceptance evidence in the [ha
 | [LPM-043](tasks.md#lpm-043) | End-to-end engineer acceptance | LPM-003, LPM-023, LPM-041, LPM-042 | Planned | — |
 | [LPM-044](tasks.md#lpm-044) | User documentation and support guide | LPM-042, LPM-043 | Planned | — |
 | [LPM-045](tasks.md#lpm-045) | Review and publish 1.0 | LPM-004, LPM-044 | Planned | — |
-| [LPM-050](tasks.md#lpm-050) | Read-only diagnostics feasibility | LPM-016, LPM-024 | Ready | — |
+| [LPM-050](tasks.md#lpm-050) | Read-only diagnostics feasibility | LPM-016, LPM-024 | Done | Codex on `main` |
 
 ## 1.0 release gate
 

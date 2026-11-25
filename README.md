@@ -18,6 +18,8 @@ Each inspection tool takes a fresh snapshot of the selected saved file. Its succ
 
 Native inspections reuse a validated SDK export on subsequent calls in the same MCP session when the selected path and source SHA-256 match. A new save with changed bytes triggers a new export. The cache is bounded and held in memory.
 
+Saved-project information is not a live controller observation. See the [read-only diagnostics feasibility review](docs/diagnostics-feasibility.md) for the SDK capability assessment and an offline simulated example. No live diagnostics tools are exposed.
+
 See the [compatibility matrix](docs/compatibility.md) for tested formats and revisions, SDK requirements, and instructions to reproduce the checks.
 
 ## Requirements
