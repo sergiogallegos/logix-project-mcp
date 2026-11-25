@@ -2,7 +2,7 @@
 
 **1.0 outcome.** An engineer can select the project they have open in Studio 5000, share its latest saved `.ACD` with an MCP client, inspect and compare the project, review a proposed offline edit, and reopen a validated `.ACD` copy or import the reviewed `.L5X` component into Studio 5000. The server also supports the documented `.L5K` and `.L5X` workflows.
 
-**Current progress.** LPM-033 publishes a new ACD and routine L5X for one locally approved routine description. Private scalar DINT tag edits and single-assignment routine edits produce reviewed full L5X copies. LPM-034 continues with vendor project verification and preservation checks. [Native review](../mcp-contract.md#reviewed-native-outputs) · [Verification evidence](handoff.md)
+**Current progress.** Native review checks the approved routine description, compares the reopened controller XML and builds a scratch copy on supported SDK revisions before publishing the paired outputs. Reviewed full L5X files can be checked with the same compiler. LPM-035 continues with local approval and artifact finalization. [Build checks](../compatibility.md#offline-controller-build) · [Verification evidence](handoff.md)
 
 Follow the [agent workflow](README.md) and record acceptance evidence in the [handoff log](handoff.md). Each task links to its deliverable and verification criteria.
 
@@ -30,7 +30,7 @@ Follow the [agent workflow](README.md) and record acceptance evidence in the [ha
 | [LPM-031](tasks.md#lpm-031) | Offline tag and metadata edits | LPM-011, LPM-030 | Done (private scalar DINT and documented descriptions) | Codex on `main` |
 | [LPM-032](tasks.md#lpm-032) | Offline ladder and structured text edits | LPM-012, LPM-030 | Done (private DINT literal assignments) | Codex on `main` |
 | [LPM-033](tasks.md#lpm-033) | Staged `.ACD` and `.L5X` outputs | LPM-015, LPM-031, LPM-032 | Done (single routine description) | Codex on `main` |
-| [LPM-034](tasks.md#lpm-034) | Logix verification and preservation checks | LPM-003, LPM-033 | In progress | Codex on `main` |
+| [LPM-034](tasks.md#lpm-034) | Logix verification and preservation checks | LPM-003, LPM-033 | Done (SDK builds and manual fallback) | Codex on `main` |
 | [LPM-035](tasks.md#lpm-035) | Local review, approval, and artifact finalization | LPM-030, LPM-034 | In progress | Codex on `main` |
 | [LPM-023](tasks.md#lpm-023) | Open or import reviewed artifacts in Studio 5000 | LPM-022, LPM-035 | In progress (full L5X handoff) | Codex on `main` |
 | [LPM-040](tasks.md#lpm-040) | Failure recovery, file boundaries, and diagnostics | LPM-002, LPM-021, LPM-033 | In progress | Codex on `main` |

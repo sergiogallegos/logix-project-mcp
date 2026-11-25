@@ -14,7 +14,8 @@ from xml.etree import ElementTree
 TESTS = Path(__file__).resolve().parents[1] / "tests"
 COMMANDS = ("logix-project-mcp", "logix-project-mcp-doctor", "logix-project-mcp-menu",
             "logix-project-mcp-review", "logix-project-mcp-review-tag",
-            "logix-project-mcp-review-routine", "logix-project-mcp-review-native", "logix-project-mcp-share")
+            "logix-project-mcp-review-routine", "logix-project-mcp-review-native", "logix-project-mcp-check-build",
+            "logix-project-mcp-share")
 
 
 def verify(folder: Path, wheel: Path, previous: Path | None, sdk: Path | None) -> None:

@@ -12,6 +12,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 from logix_project_mcp import routine_edits, tag_edits
+from logix_project_mcp.build_check import check_build
 from logix_project_mcp.edit_review import publish_reviewed
 from logix_project_mcp.project import ProjectReadError, export_snapshot, parse_l5x, read_project
 from logix_project_mcp.selection import ProjectSelection
@@ -157,4 +158,14 @@ class RoutineEditTests(unittest.IsolatedAsyncioTestCase):
                 routine = root.find(f".//Program[@Name='MainProgram']/Routines/Routine[@Name='McpTrial{language}']")
                 self.assertIsNotNone(routine)
                 self.assertEqual(routine_edits.code_node(routine, language).text.strip(), expected)
+            data = current.read_bytes()
+            built = await check_build(current, sha256(data).hexdigest())
+            self.assertEqual(built["status"], "passed", built)
+            invalid = folder / "Invalid.L5X"
+            invalid.write_bytes(data.replace(b"McpScratchST := 37;", b"McpScratchST := ;"))
+            self.assertNotEqual(invalid.read_bytes(), data)
+            rejected = await check_build(invalid, sha256(invalid.read_bytes()).hexdigest())
+            self.assertEqual(rejected["status"], "failed", rejected)
+            self.assertTrue(rejected["diagnostics"])
+            self.assertEqual(current.read_bytes(), data)
         self.assertEqual(sha256(source.read_bytes()).digest(), original)

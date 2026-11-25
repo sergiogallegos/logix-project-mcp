@@ -13,11 +13,13 @@ from xml.etree.ElementTree import Element, tostring
 
 from pydantic import TypeAdapter
 
+from .build_check import check_build
 from .documentation import description_spans
 from .export import RoutineComponent, component_xpath, validate_artifact
+from .inventory import PROTECTION_ELEMENTS, xml_boolean
 from .project import (ProjectReadError, ProjectSnapshot, controller_from_l5x, export_snapshot,
                       parse_l5x, parse_l5x_bytes, run_sdk_worker, snapshot_source)
-from .proposals import Proposal, resolve_target, validate_proposal
+from .proposals import Proposal, check_documentation_boundary, resolve_target, validate_proposal
 from .selection import ProjectSelection, read_selection, validate_project_path
 
 
@@ -56,6 +58,7 @@ def patch_component(path: Path, target: RoutineComponent, proposal: Proposal) ->
 
 
 def verify_readback(baseline: Element, reopened: Element, target: RoutineComponent, proposal: Proposal) -> None:
+    check_documentation_boundary(reopened)
     revision = baseline.get("SoftwareRevision")
     if not revision or reopened.get("SoftwareRevision") != revision:
         raise ProjectReadError("export_failed", "The staged project has a different software revision.")
@@ -72,11 +75,16 @@ def verify_readback(baseline: Element, reopened: Element, target: RoutineCompone
         description = routine.find("Description")
         if description is not None:
             routine.remove(description)
-        for node in controller.iter():
-            if len(node) and node.text is not None and not node.text.strip():
-                node.text = None
+        pending = [controller]
+        while pending:
+            node = pending.pop()
             if node.tail is not None and not node.tail.strip():
                 node.tail = None
+            if node.tag in PROTECTION_ELEMENTS or xml_boolean(node, "IsEncrypted") is True:
+                continue
+            if len(node) and node.text is not None and not node.text.strip():
+                node.text = None
+            pending.extend(node)
     if tostring(before) != tostring(after):
         raise ProjectReadError("export_failed", "The reopened ACD has changes outside the reviewed description.")
 
@@ -125,18 +133,24 @@ async def publish_native(current: Callable[[], ProjectSelection], proposal: Prop
         if await snapshot_source(component, bundle / component.name) != component_hash or sha256_file(acd) != acd_hash:
             raise ProjectReadError("artifact_changed", "A staged output changed during verification.")
         hashes = {"acd": acd_hash, "l5x": component_hash}
+        build = await check_build(bundle / acd.name, acd_hash, known_revision=root.get("SoftwareRevision"))
+        if build["status"] == "failed":
+            raise ProjectReadError("export_failed", "Logix Designer rejected the staged project. " +
+                                   "\n".join(build["diagnostics"]))
         if await snapshot_source(selection.path, folder / "latest.ACD") != fingerprint:
             raise ProjectReadError("project_changed", "The source changed during native review.")
         if current() != selection:
             raise ProjectReadError("selection_changed", "The project selection changed during native review.")
         # Windows rename publishes the complete pair and fails if the destination now exists.
+        if sha256_file(bundle / component.name) != component_hash or sha256_file(bundle / acd.name) != acd_hash:
+            raise ProjectReadError("artifact_changed", "A verified output changed before publication.")
         try:
             os.rename(bundle, destination)
         except OSError as exc:
             if os.path.lexists(destination):
                 raise ProjectReadError("destination_exists", "The output directory is already occupied.") from exc
             raise
-        return {**receipt, "sha256": hashes}
+        return {**receipt, "sha256": hashes, "build": build}
 
 
 def confirm_native(receipt: dict) -> bool:

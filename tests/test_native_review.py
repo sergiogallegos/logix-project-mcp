@@ -7,7 +7,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import Mock, patch
 
 from logix_project_mcp import native_review as native
-from logix_project_mcp.project import ProjectReadError, ProjectSnapshot, parse_l5x, read_project
+from logix_project_mcp.project import ProjectReadError, ProjectSnapshot, parse_l5x, parse_l5x_bytes, read_project
 from logix_project_mcp.proposals import create_proposal
 from logix_project_mcp.selection import ProjectSelection
 
@@ -36,6 +36,7 @@ class NativeReviewTests(unittest.IsolatedAsyncioTestCase):
         self.enterContext(patch.object(native, "sys", Mock(platform="win32")))
         self.enterContext(patch.object(native, "export_snapshot", self.export))
         self.importer = self.enterContext(patch.object(native, "run_sdk_worker", side_effect=self.import_xml))
+        self.build = self.enterContext(patch.object(native, "check_build", return_value={"status": "passed"}))
 
     async def export(self, acd, output, name, xpath=None):
         output.write_bytes(COMPONENT if xpath else acd.read_bytes())
@@ -65,6 +66,40 @@ class NativeReviewTests(unittest.IsolatedAsyncioTestCase):
             await self.publish()
         self.assertEqual(result["sha256"], {k: native.sha256_file(Path(v)) for k, v in result["outputs"].items()})
         self.assertEqual(self.source.read_bytes(), FULL)
+        self.assertEqual(result["build"]["status"], "passed")
+
+    async def test_build_error_prevents_native_publication(self):
+        self.build.return_value = {"status": "failed", "diagnostics": ["Synthetic compiler diagnostic"]}
+        with self.assertRaisesRegex(ProjectReadError, "Synthetic compiler diagnostic"):
+            await self.publish()
+        self.assertEqual(list(self.folder.iterdir()), [self.source])
+        self.assertEqual(self.source.read_bytes(), FULL)
+
+    async def test_component_changed_during_build_prevents_publication(self):
+        async def alter_component(acd, digest, *, known_revision):
+            acd.with_name("Routine.L5X").write_bytes(b"altered")
+            return {"status": "passed"}
+        self.build.side_effect = alter_component
+        with self.assertRaisesRegex(ProjectReadError, "changed before publication"):
+            await self.publish()
+        self.assertEqual(list(self.folder.iterdir()), [self.source])
+
+    def test_readback_preserves_unrelated_aoi_and_opaque_content(self):
+        aoi = (b'<AddOnInstructionDefinitions><AddOnInstructionDefinition Name="Example" Revision="1.0"/>'
+               b'<EncodedData EncodedType="AddOnInstructionDefinition"> <Blob>opaque data</Blob></EncodedData>'
+               b'</AddOnInstructionDefinitions>')
+        source = FULL.replace(b"<Programs>", aoi + b"<Programs>")
+        reviewed = source.replace(b"<STContent>", b"<Description>Approved</Description><STContent>")
+        proposal = {"preview": [{"after": "Approved"}]}
+        native.verify_readback(parse_l5x_bytes(source), parse_l5x_bytes(reviewed), TARGET, proposal)
+        for changed in (reviewed.replace(b'1.0"', b'2.0"'), reviewed.replace(b"opaque data", b"modified data"),
+                        reviewed.replace(b" <Blob>", b"  <Blob>")):
+            with self.assertRaisesRegex(ProjectReadError, "outside the reviewed description"):
+                native.verify_readback(parse_l5x_bytes(source), parse_l5x_bytes(changed), TARGET, proposal)
+        signed = reviewed.replace(b"</RSLogix5000Content>", b"<SafetySignature/></RSLogix5000Content>")
+        with self.assertRaises(ProjectReadError) as rejected:
+            native.verify_readback(parse_l5x_bytes(source), parse_l5x_bytes(signed), TARGET, proposal)
+        self.assertEqual(rejected.exception.code, "unsupported_safety_content")
 
     async def test_failed_or_cancelled_import_never_publishes(self):
         self.assertIsNone(await self.publish(lambda _: False))
@@ -146,6 +181,8 @@ class NativeSdkTests(unittest.IsolatedAsyncioTestCase):
             output = Path(tmp) / "Approved"
             receipt = await native.publish_native(lambda: selection, proposal, proposal["approval_id"], output,
                                                   lambda _: True)
+            self.assertEqual(receipt["build"]["status"], "passed")
+            self.assertEqual(receipt["build"]["artifact_sha256"], receipt["sha256"]["acd"])
             for kind, filename in receipt["outputs"].items():
                 self.assertEqual(native.sha256_file(Path(filename)), receipt["sha256"][kind])
             self.assertEqual(parse_l5x(output / "Routine.L5X").findtext(".//Routine[@Use='Target']/Description"),

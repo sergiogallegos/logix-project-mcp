@@ -191,7 +191,9 @@ Select the saved ACD on a Windows host with the matching Studio version and Rock
 
 Use `--selection-file` in place of `--project` if the preview used shared selection. The parent directory must exist. Review the source, scoped routine, before/after text and output paths in the local terminal. Type `APPROVE` to apply the description on a temporary copy. Declining exits with status 2. A stale selection, changed source, failed import, or occupied destination leaves existing outputs intact.
 
-On success, the command returns paths and SHA-256 values for `Reviewed.ACD` and the imported `Routine.L5X`. It checks the software revision and compares the full controller XML from the reopened ACD with the baseline. The comparison allows the approved description, Studio's controller save timestamp, and XML indentation. The supported native operation is a single routine description. Project-wide descriptions, private tag changes, and routine assignment edits use the full L5X workflows. Studio project build verification is tracked in LPM-034.
+On success, the command returns paths and SHA-256 values for `Reviewed.ACD` and the imported `Routine.L5X`. It checks the software revision and compares the full controller XML from the reopened ACD with the baseline. The comparison allows the approved description, Studio's controller save timestamp, and XML indentation outside protected payloads. The supported native operation is a single routine description. Project-wide descriptions, private tag changes, and routine assignment edits use the full L5X workflows.
+
+The native receipt includes a `build` result for the exact ACD bytes. A compiler error, failed SDK operation or timeout on a supported build prevents publication. For projects before revision 37 the receipt records `manual_required`. Use the separate local build command for full L5X review artifacts. [Offline build procedure](compatibility.md#offline-controller-build)
 
 ## Documentation copy
 

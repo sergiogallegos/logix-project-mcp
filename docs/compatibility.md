@@ -42,6 +42,28 @@ On the Windows 11 / SDK wheel 2.0.2 host, a separate vendor smoke check used the
 
 To repeat this optional test, use only a synthetic full L5X sample from the matching installed revision and set `LOGIX_PROJECT_MCP_TEST_DOCUMENTATION_L5X` to its path. Run `python -m unittest discover -s tests -p test_documentation_vendor.py -v` in the SDK-enabled environment. The test uses temporary copies and does not perform a build or contact a controller.
 
+## Offline controller build
+
+Run the local checker on a reviewed full L5X or ACD. Use the SHA-256 from the corresponding review receipt (`artifact_sha256` for full L5X or `sha256.acd` for native output). The checker verifies that fingerprint, runs the vendor compiler on a private copy, then rechecks the artifact before returning its result.
+
+```powershell
+.\.venv\Scripts\logix-project-mcp-check-build.exe 'C:\Reviews\Reviewed.ACD' --sha256 $artifactSha256
+```
+
+| Result | Exit | Meaning |
+| --- | --- | --- |
+| `passed` | 0 | Logix Designer opened and built the full project. Inspect any warnings in `diagnostics`. |
+| `failed` | 1 | Studio reported an open, import or compiler error. The report includes available vendor diagnostics. File, worker and configuration errors also exit 1 with an explanation on stderr. |
+| `manual_required` | 2 | The SDK compiler is unavailable on this host or for this revision. Open a separate offline copy in the matching Studio release, run **Verify Controller**, and record its errors, warnings, Studio version and the reviewed artifact hash. |
+
+The Rockwell Python 2.0.2 SDK documents controller builds from Logix Designer revision 37. A component L5X needs its containing project to resolve dependencies. Use the paired ACD for routine-component verification. A build checks the project as compiled and the native readback checks the intended description and surrounding controller XML. Safety-signature authentication, controller execution and engineer sign-off are separate activities.
+
+| Revision tested on Windows | Observed result |
+| --- | --- |
+| 38.02 | The SDK built a reviewed ACD, a full L5X documentation copy, and a full L5X containing a private DINT edit. It rejected an incomplete ST expression with `RxSTX_E_UNEXPECTED_TOKEN` and a separate Ladder fixture with `RxCMP_E_AUDIT_OUTPUTS`. Both fixtures had previously opened. |
+| 37.00 | The installed checker built a synthetic full project and returned `passed`. |
+| 35.00 | The checker returned `manual_required`. The matching Studio desktop opened the synthetic ACD. A manual Verify Controller result is outstanding for that sample. |
+
 ## Native snapshot cache measurements
 
 On the Windows 11 build 26200 and SDK wheel 2.0.2 setup above, one MCP session read synthetic revision 38.02 projects through shared selection. The elapsed times include the verified source copy, XML inspection, and MCP response.

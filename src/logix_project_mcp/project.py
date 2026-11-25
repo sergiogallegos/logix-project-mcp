@@ -210,18 +210,19 @@ async def export_snapshot(snapshot: Path, output: Path, source_name: str, compon
 
 
 async def run_sdk_worker(source_name: str, action: str, *arguments: str) -> None:
+    timeout = 300 if action == "build" else SDK_TIMEOUT_SECONDS
     with CancelScope(shield=True):
         process = await asyncio.create_subprocess_exec(
             sys.executable, "-m", "logix_project_mcp._sdk_worker", *arguments,
             stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL,
         )
     try:
-        async with asyncio.timeout(SDK_TIMEOUT_SECONDS):
+        async with asyncio.timeout(timeout):
             await process.wait()
     except TimeoutError as exc:
         raise ProjectReadError(
             "sdk_timeout",
-            f"Logix Designer SDK did not finish {action}ing {source_name} within {SDK_TIMEOUT_SECONDS} seconds."
+            f"Logix Designer SDK did not finish {action}ing {source_name} within {timeout} seconds."
         ) from exc
     finally:
         if process.returncode is None:

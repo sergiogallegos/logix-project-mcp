@@ -232,6 +232,12 @@ The local native review command accepts one source-bound routine description pre
 
 On Windows with Python 3.12.10 and Rockwell SDK wheel 2.0.2, MCP previewed a description for `MainProgram.InspectText` in a synthetic revision 38.02 ACD. Codex acted as test operator at the installed wheel's local prompt. The SDK imported the component into a staged ACD and reopened it with the approved text. The source SHA-256 stayed `d4f900f333f132a171a591267e4c7c3c4a11c80ca256f2bbca3b9167700e245e`. Tag and assignment edits continue through the full L5X workflow. LPM-034 is next for project verification and broader preservation evidence.
 
+## 2026-11-25 · LPM-034 · Offline build and preservation checks · Codex on `main`
+
+Native review now checks an independent copy of the staged ACD with the vendor compiler before publication. The receipt binds the result to the ACD fingerprint. The installed `logix-project-mcp-check-build` command also checks a reviewed full L5X. Tests cover changed artifacts, failed builds, warnings, unrelated AOI definitions, opaque content and recognized safety-signature indicators. [Build procedure and compatibility](../compatibility.md#offline-controller-build)
+
+On Windows with Python 3.12.10 and Rockwell SDK wheel 2.0.2, the compiler passed a synthetic 37.00 full project and reviewed 38.02 documentation and private tag outputs. A 38.02 native routine-description change with an unrelated AOI passed reopen, preservation and build checks and retained the source hash. An incomplete ST expression returned `RxSTX_E_UNEXPECTED_TOKEN`. A prior export fixture opened but failed its Ladder build with `RxCMP_E_AUDIT_OUTPUTS`. The checker reported manual verification for revision 35.00. The v35 desktop opened the disposable project, but its Verify Controller result was not observed. Protected payload and signature cases used synthetic XML. The next task is LPM-035.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.

@@ -24,6 +24,8 @@ You can also create an uncalled Ladder or Structured Text routine that assigns o
 
 On Windows, you can approve a description change for one routine in a saved ACD. The local command imports the reviewed routine component into a temporary ACD, reopens it with the SDK, and publishes `Reviewed.ACD` and `Routine.L5X` together in a new directory. [Native review walkthrough](docs/mcp-contract.md#reviewed-native-outputs)
 
+Native review also builds a disposable copy before publication when the project revision supports the SDK compiler. To check a reviewed full L5X or recheck an ACD, run `logix-project-mcp-check-build` with the artifact path and SHA-256 from its receipt. The result includes compiler diagnostics or identifies when a manual Studio verification is required. [Build checks and exit codes](docs/compatibility.md#offline-controller-build)
+
 Native inspections reuse a validated SDK export on subsequent calls in the same MCP session when the selected path and source SHA-256 match. A new save with changed bytes triggers a new export. The cache is bounded and held in memory.
 
 For measured startup, search, comparison and native read times, see the [inspection performance report](docs/performance.md). It includes memory targets and commands to repeat the measurements on your host.
