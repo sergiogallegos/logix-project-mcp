@@ -22,6 +22,8 @@ Preservation tests use synthetic AOI definitions and opaque protected records, r
 
 For the optional SDK documentation reopen test, see [documentation verification](docs/compatibility.md#documentation-verification).
 
+For native paired outputs, set `LOGIX_PROJECT_MCP_TEST_NATIVE_OUTPUT_ACD` to a synthetic revision 38.02 ACD containing the ST routine `MainProgram.InspectText`. Run `python -m unittest discover -s tests -p test_native_review.py -v` on the SDK-enabled Windows host. The test stages both outputs and checks their fingerprints and the saved source. The portable cases exercise decline, interrupted or failed import, changed source and selection, revision and content mismatches, and competing publishers.
+
 Local review tests cover the packaged command, mocked interactive approval and decline, noninteractive rejection, invalid receipts, replay and a competing approval sidecar, and changes to source, artifact, or shared selection during review. They use synthetic documentation artifacts and never approve a real project.
 
 The same tests exercise the read-only `--check` command with a retained review ID. They cover a moved or altered record, a different selection, edits to the source or reviewed copy, and a record replaced during verification. The optional SDK reopen test also uses the path returned by this check.

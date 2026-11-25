@@ -181,6 +181,18 @@ $approvalId = Read-Host 'Approval ID retained from preview'
 
 The command reconstructs the preview, reparses the staged instruction, then displays the proposed copy's path and hash. Enter `APPROVE` to publish it. Declining exits with code 2. A changed source, selection, stage, or occupied destination prevents publication. The resulting artifact is a full project: in Studio, open it offline and choose a separate scratch ACD in **Save Imported Project As**. The local receipt identifies the checked L5X bytes. Vendor import is a separate step.
 
+## Reviewed native outputs
+
+Select the saved ACD on a Windows host with the matching Studio version and Rockwell SDK. Call `get_project`, then `preview_change_proposal` with its `source_sha256` as `expected_source_sha256`, the selection ID when using shared selection, and one `set_description` operation targeting a named Ladder or ST routine. Save the complete proposal from `structuredContent` as JSON and retain the `approval_id` from that preview.
+
+```powershell
+.\.venv\Scripts\logix-project-mcp-review-native.exe --project 'C:\Samples\Project.ACD' --proposal proposal.json --approval-id $approvalId 'C:\Reviews\Trial'
+```
+
+Use `--selection-file` in place of `--project` if the preview used shared selection. The parent directory must exist. Review the source, scoped routine, before/after text and output paths in the local terminal. Type `APPROVE` to apply the description on a temporary copy. Declining exits with status 2. A stale selection, changed source, failed import, or occupied destination leaves existing outputs intact.
+
+On success, the command returns paths and SHA-256 values for `Reviewed.ACD` and the imported `Routine.L5X`. It checks the software revision and compares the full controller XML from the reopened ACD with the baseline. The comparison allows the approved description, Studio's controller save timestamp, and XML indentation. The supported native operation is a single routine description. Project-wide descriptions, private tag changes, and routine assignment edits use the full L5X workflows. Studio project build verification is tracked in LPM-034.
+
 ## Documentation copy
 
 With `--export-dir` configured, `create_documentation_copy` accepts a reviewed proposal, its independently retained `expected_approval_id`, and a new basename ending in `.L5X`. It reads a verified copy of the selected full UTF-8 L5X, validates the proposal against that exact snapshot, and changes only the targeted description byte ranges. Creating a description in a self-closing element also expands that element's closing delimiter. Other XML bytes, including logic, attributes, data, comments, and CDATA, remain unchanged.

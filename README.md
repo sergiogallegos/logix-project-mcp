@@ -22,6 +22,8 @@ For an unused, private decimal DINT in controller or program scope, preview crea
 
 You can also create an uncalled Ladder or Structured Text routine that assigns one integer literal to a private program DINT. For an existing routine of that form, preview a new literal and approve a separate full L5X copy. [Offline routine edit walkthrough](docs/mcp-contract.md#offline-routine-edits)
 
+On Windows, you can approve a description change for one routine in a saved ACD. The local command imports the reviewed routine component into a temporary ACD, reopens it with the SDK, and publishes `Reviewed.ACD` and `Routine.L5X` together in a new directory. [Native review walkthrough](docs/mcp-contract.md#reviewed-native-outputs)
+
 Native inspections reuse a validated SDK export on subsequent calls in the same MCP session when the selected path and source SHA-256 match. A new save with changed bytes triggers a new export. The cache is bounded and held in memory.
 
 For measured startup, search, comparison and native read times, see the [inspection performance report](docs/performance.md). It includes memory targets and commands to repeat the measurements on your host.

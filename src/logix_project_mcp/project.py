@@ -206,9 +206,13 @@ def parse_l5x_bytes(data: bytes) -> Element:
 
 async def export_snapshot(snapshot: Path, output: Path, source_name: str, component_xpath: str | None = None) -> None:
     selector = (component_xpath,) if component_xpath is not None else ()
+    await run_sdk_worker(source_name, "export", str(snapshot), str(output), *selector)
+
+
+async def run_sdk_worker(source_name: str, action: str, *arguments: str) -> None:
     with CancelScope(shield=True):
         process = await asyncio.create_subprocess_exec(
-            sys.executable, "-m", "logix_project_mcp._sdk_worker", str(snapshot), str(output), *selector,
+            sys.executable, "-m", "logix_project_mcp._sdk_worker", *arguments,
             stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL,
         )
     try:
@@ -217,7 +221,7 @@ async def export_snapshot(snapshot: Path, output: Path, source_name: str, compon
     except TimeoutError as exc:
         raise ProjectReadError(
             "sdk_timeout",
-            f"Logix Designer SDK did not finish exporting {source_name} within {SDK_TIMEOUT_SECONDS} seconds."
+            f"Logix Designer SDK did not finish {action}ing {source_name} within {SDK_TIMEOUT_SECONDS} seconds."
         ) from exc
     finally:
         if process.returncode is None:
@@ -232,4 +236,4 @@ async def export_snapshot(snapshot: Path, output: Path, source_name: str, compon
             WorkerFailure.RUNTIME_LOAD: "Check the .NET runtime and DOTNET_ROOT in the MCP client configuration.",
             WorkerFailure.EXPORT: "Check the project revision and SDK installation with logix-project-mcp-doctor.",
         }.get(process.returncode, f"The SDK worker exited unexpectedly with code {process.returncode}. Retry the request.")
-        raise ProjectReadError("sdk_error", f"Logix Designer SDK could not export {source_name}. {hint}")
+        raise ProjectReadError("sdk_error", f"Logix Designer SDK could not {action} {source_name}. {hint}")

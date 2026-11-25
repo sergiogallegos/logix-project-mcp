@@ -226,6 +226,12 @@ The stdio tests exercised both languages and operations, readable previews, inva
 
 In a clean wheel installation, Codex acted as test operator at the local review prompt. MCP read back `MainProgram.McpReviewedTrial` with the approved ST assignment. The source and resulting L5X hashes matched the preview and receipt. This run verified saved-file behavior; controller execution and a Studio project build were outside the run. LPM-033, staged native and component outputs, is the next unfinished implementation task.
 
+## 2026-11-25 · LPM-033 · Done for routine descriptions · Codex on `main`
+
+The local native review command accepts one source-bound routine description preview and publishes `Reviewed.ACD` and the imported `Routine.L5X` together. It compares the reopened controller export against the baseline, including routine source and controller revision, allowing the description, controller save timestamp and indentation to differ. The regression cases cover decline, canceled and failed imports, competing publishers, an occupied destination, source saves, selection changes and rejected readback. [Native review walkthrough](../mcp-contract.md#reviewed-native-outputs)
+
+On Windows with Python 3.12.10 and Rockwell SDK wheel 2.0.2, MCP previewed a description for `MainProgram.InspectText` in a synthetic revision 38.02 ACD. Codex acted as test operator at the installed wheel's local prompt. The SDK imported the component into a staged ACD and reopened it with the approved text. The source SHA-256 stayed `d4f900f333f132a171a591267e4c7c3c4a11c80ca256f2bbca3b9167700e245e`. Tag and assignment edits continue through the full L5X workflow. LPM-034 is next for project verification and broader preservation evidence.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.

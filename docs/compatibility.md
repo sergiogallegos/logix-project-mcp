@@ -5,12 +5,13 @@ Save changes in Studio 5000 before inspecting or exporting a project. The menu s
 | Selected input | Read, compare and preview descriptions | Export | Create a reviewed documentation copy |
 | --- | --- | --- | --- |
 | Full project L5X | SDK-free | Full L5X byte copy without SDK. Format conversion and component export require the Windows SDK. | Stage and verify a separate full UTF-8 L5X from a full UTF-8 L5X source. |
-| Saved ACD or L5K | Windows with the licensed SDK and matching Studio revision | Full L5X, full L5K or a supported component L5X | Export a full L5X, select that file, then create a fresh proposal against it. |
-| Component L5X | Project selection requires a full controller project | Supported as an export destination for selected components | Local review handles full project L5X artifacts only. |
+| Saved ACD | Windows with the licensed SDK and matching Studio revision | Full L5X, full L5K or a supported component L5X | Approve one routine description and publish a new ACD plus routine L5X. For other descriptions, select a full L5X export and preview against it. |
+| Saved L5K | Windows with the licensed SDK and matching Studio revision | Full L5X, full L5K or a supported component L5X | Export a full L5X, select that file, then create a fresh proposal against it. |
+| Component L5X | Project selection requires a full controller project | Supported as an export destination for selected components | The native review command produces a routine component from the selected ACD. |
 
 The full-L5X documentation workflow covers existing controllers, programs, scoped tags, and readable Ladder or Structured Text routines. A separate local review command supports creating, changing the saved value of, renaming, and removing private, unreferenced decimal DINT tags on full UTF-8 L5X copies. The Windows SDK reopened a synthetic revision 38.02 copy containing a newly created controller tag with value −17. [Tag edit limits](mcp-contract.md#private-dint-tag-edits) · [Description operations](mcp-contract.md#offline-change-proposals) · [Studio documentation import and readback](agents/handoff.md#2026-11-25--lpm-043--in-progress--codex-on-main)
 
-For routine edits, the SDK reopened a synthetic revision 38.02 full L5X containing an updated Ladder `MOVE` and an updated Structured Text assignment. Both returned the expected literal and private program DINT. A revision 35.00 synthetic XML test covers the older `MOV` spelling. Vendor readback was exercised on 38.02. Direct reviewed ACD output and reviewed component output remain open. [Supported routine edits](mcp-contract.md#offline-routine-edits)
+For routine edits, the SDK reopened a synthetic revision 38.02 full L5X containing an updated Ladder `MOVE` and an updated Structured Text assignment. Both returned the expected literal and private program DINT. A revision 35.00 synthetic XML test covers the older `MOV` spelling. Executable edits produce full L5X copies. Paired native outputs support routine descriptions. [Supported routine edits](mcp-contract.md#offline-routine-edits) · [Native review walkthrough](mcp-contract.md#reviewed-native-outputs)
 
 ## Verified reads
 
