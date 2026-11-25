@@ -87,6 +87,8 @@ To enable comparison, add `--compare-project` followed by the candidate path in 
 
 The documentation workflow rejects exports with recognized safety-class or safety-signature indicators. The original saved-project inspection tools remain available. See the [verification and preservation limits](docs/compatibility.md#documentation-verification) for the distinction between exact-artifact and vendor checks.
 
+To finalize a staged documentation copy, use the local interactive `logix-project-mcp-review` command. It presents the exact proposal and verifies the source and artifact both before and after confirmation. See [local review and approval](docs/mcp-contract.md#local-review-and-approval).
+
 To enable export, add `--export-dir` followed by an existing directory you choose. Ask the agent for a new filename in that directory, such as `Review.L5X`. The tool reads a snapshot of the selected project and preserves existing files. Copying a full `.L5X` to a new `.L5X` keeps its exact bytes and works without the SDK. Converting formats and exporting components use the Rockwell SDK on Windows.
 
 ### Share a project from Windows

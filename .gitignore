@@ -6,5 +6,6 @@ dist/
 .local/
 *.[Aa][Cc][Dd]
 *.[Ll]5[KkXx]
+*.[Ll]5[Xx].approval.json
 *.nupkg
 *.whl

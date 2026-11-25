@@ -145,6 +145,22 @@ Retain the proposal, reviewed approval identity, and the creation result's `arti
 
 This confirms exact correspondence to the supported documentation proposal as of the verification snapshots. The result explicitly includes `vendor_verification: "not_performed"`. It is not proof of human approval, a vendor build or import check, or a guarantee that an external process cannot modify the files after verification. See the [compatibility notes](compatibility.md#documentation-verification) for separately recorded vendor smoke checks.
 
+## Local review and approval
+
+The MCP copy creation result is a candidate artifact, not an engineer's approval. The local command `logix-project-mcp-review` finalizes a documentation candidate by recording a separate approval sidecar; it does not modify, move, import, or open the candidate in Studio 5000.
+
+Keep the preview and creation tools' exact `structuredContent` JSON objects in separate local files. In an interactive terminal, run the installed command with the saved source and the explicit artifact:
+
+```powershell
+logix-project-mcp-review --project Source.L5X --proposal proposal.json --receipt creation.json Reviewed.L5X
+```
+
+For a proposal created in shared mode, replace `--project Source.L5X` with `--selection-file` and the same selection JSON path. The command checks the creation receipt path and proposal identity, reconstructs and verifies the candidate, and displays the complete proposal, scoped before/after values, source and artifact fingerprints, and exact sidecar destination. It requires a local interactive response of `APPROVE`; anything else declines. No MCP tool or noninteractive confirmation option issues this approval record.
+
+After approval the command re-verifies the source, selection, proposal, and artifact. It then creates `Reviewed.L5X.approval.json` beside the candidate, refusing an existing sidecar. The record includes `decision: "approved_documentation_copy"`, a UTC approval time, the full reviewed proposal, verification result, and a `review_id` tying the reviewed content to the artifact and sidecar path. Creation and review leave the saved source and candidate bytes unchanged. The approval record is a local audit record, not an authenticated signature, access-control boundary, or vendor build approval; another process with local file access can modify records.
+
+On decline, stale source, altered artifact, or failed validation no approval record is published. Decline returns exit code 2; validation failures return 1. A conflicting or previously created sidecar is preserved. If a new saved revision or another change is needed, retain the original source and existing review data, generate a fresh preview and separate candidate filename, and review its new before/after values. Do not treat an approval record for a previously verified snapshot as approval of different bytes.
+
 ## Offline export
 
 Add `--export-dir` and an existing directory to the launch arguments to enable `export_project`. The export uses the selected saved file. Supply a filename without directory segments. The server publishes the finished artifact only when there is no existing entry at the destination. It returns the absolute artifact `path`, lowercase `format`, requested `component` or `null`, and the source snapshot's SHA-256.
