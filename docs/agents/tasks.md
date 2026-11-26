@@ -120,6 +120,8 @@ Build and test installable artifacts, including a Python wheel and Windows setup
 
 Run the complete workflow on a clean documented Windows setup with a sample project. Open `.ACD` in Studio 5000, share it, find and compare logic, preview an offline edit, approve it, verify the new copy, and reopen it or import the component. Also run the SDK-free `.L5X` path and `.L5K` verification. Record evidence for failures and recovery as well as the successful path.
 
+Have an engineer who is new to the tool follow the quick start with a sample full `.L5X` export. Record the time from starting setup to locating a known tag reference in the correct routine and rung, plus any step that required help.
+
 ### LPM-044
 
 Finish the quick start, SDK and license prerequisites, supported-format matrix, desktop and MCP client setup, offline editing guide, troubleshooting, and release notes. Walk through the instructions from a clean environment. Make version and verification claims traceable to release evidence, including saved versus unsaved project behavior.
