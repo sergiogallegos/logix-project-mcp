@@ -2,7 +2,7 @@
 
 **1.0 outcome.** An engineer can select the project they have open in Studio 5000, share its latest saved `.ACD` with an MCP client, inspect and compare the project, review a proposed offline edit, and reopen a validated `.ACD` copy or import the reviewed `.L5X` component into Studio 5000. The server also supports the documented `.L5K` and `.L5X` workflows.
 
-**Current progress.** Native review publishes the validated ACD, routine component and local approval record together. An engineer can recheck both outputs against the retained review ID before using them in Studio. LPM-023 continues with the Studio desktop handoff. [Native approval and recheck](../mcp-contract.md#reviewed-native-outputs) · [Verification evidence](handoff.md)
+**Current progress.** The Studio walkthrough covers opening a reviewed ACD, importing its routine into a separate offline project and preserving pending editor work. LPM-040 is next for failure recovery on native outputs. [Studio handoff](../studio-5000-integration.md#open-a-reviewed-acd-or-import-its-routine) · [Verification evidence](handoff.md)
 
 Follow the [agent workflow](README.md) and record acceptance evidence in the [handoff log](handoff.md). Each task links to its deliverable and verification criteria.
 
@@ -32,7 +32,7 @@ Follow the [agent workflow](README.md) and record acceptance evidence in the [ha
 | [LPM-033](tasks.md#lpm-033) | Staged `.ACD` and `.L5X` outputs | LPM-015, LPM-031, LPM-032 | Done (single routine description) | Codex on `main` |
 | [LPM-034](tasks.md#lpm-034) | Logix verification and preservation checks | LPM-003, LPM-033 | Done (SDK builds and manual fallback) | Codex on `main` |
 | [LPM-035](tasks.md#lpm-035) | Local review, approval, and artifact finalization | LPM-030, LPM-034 | Done | Codex on `main` |
-| [LPM-023](tasks.md#lpm-023) | Open or import reviewed artifacts in Studio 5000 | LPM-022, LPM-035 | In progress (full L5X handoff) | Codex on `main` |
+| [LPM-023](tasks.md#lpm-023) | Open or import reviewed artifacts in Studio 5000 | LPM-022, LPM-035 | Done | Codex on `main` |
 | [LPM-040](tasks.md#lpm-040) | Failure recovery, file boundaries, and diagnostics | LPM-002, LPM-021, LPM-033 | In progress | Codex on `main` |
 | [LPM-041](tasks.md#lpm-041) | Large-project performance and reliability | LPM-013, LPM-014, LPM-016, LPM-040 | Done | Codex on `main` |
 | [LPM-042](tasks.md#lpm-042) | Packaging, clean installs, and release CI | LPM-001, LPM-022, LPM-035, LPM-040 | Done | Codex on `main` |

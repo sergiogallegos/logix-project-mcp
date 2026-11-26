@@ -27,6 +27,35 @@ The pre-save SHA-256 for the edited sample began `795ee045`, and the post-save S
 
 ## Desktop walkthrough
 
+### Open a reviewed ACD or import its routine
+
+Keep the review ID from local approval and the published directory containing `Reviewed.ACD`, `Routine.L5X` and the approval record. Immediately before using either output, check the bundle against the original source selection. Substitute your actual paths. If approval used `--selection-file`, supply that same selection file in place of `--project`. [Native approval and recheck](mcp-contract.md#reviewed-native-outputs)
+
+```powershell
+$reviewId = Read-Host 'Review ID retained at approval'
+$json = logix-project-mcp-review-native --project 'C:\Projects\Source.ACD' --check $reviewId 'C:\Reviews\Trial'
+if ($LASTEXITCODE -ne 0) { throw 'Recheck failed. Resolve the reported mismatch before opening or importing.' }
+$review = $json | ConvertFrom-Json
+$review.proposal.source | Format-List path, source_sha256, controller, software_revision
+$review.proposal.preview | ConvertTo-Json -Depth 4
+'Published paths'
+$review.outputs | Format-List acd, l5x
+'Approved SHA-256'
+$review.sha256 | Format-List acd, l5x
+$review.build.status
+```
+
+The preview names the destination program and routine and shows the approved description before and after the edit. Each key in `outputs` has a matching key in `sha256`. If the build status is `manual_required`, complete the [manual offline build check](compatibility.md#offline-controller-build) and record its result.
+
+**Open the complete reviewed project.** In a separate offline Logix Designer window, choose **File > Open** and enter the absolute `outputs.acd` path. Check the controller, program, routine and description against the receipt. To continue editing, work on a separate copy. Keep the published files at their recorded paths for future checks.
+
+**Import the reviewed routine into an offline working copy.**
+
+1. Identify the intended destination by its full ACD path, controller and revision. If the open editor shows an asterisk, leave that window open. To include its pending edits, use **File > Save As** to save them under a new path, inspect the saved changes and review the proposal against that new baseline before importing. To keep the pending work separate, open a fresh copy of the reviewed source in another window. Confirm that the copy's SHA-256 matches `proposal.source.source_sha256` before editing it.
+2. In the destination window, confirm **Offline**. In **Controller Organizer**, right-click the program named in the preview and choose **Import Routine**. Enter the absolute `outputs.l5x` path and confirm the file picker (**Open** in the tested 38.02 editor) to reach **Import Configuration**. [Rockwell routine import procedure](https://www.rockwellautomation.com/en-us/docs/studio-5000-logix-designer/38-02/contents-ditamap/studio-5000-logix-designer/import-and-export/importing-exporting-a-routine.html)
+3. The approved description edit targets an existing routine, so expect a same-name collision. Check the destination program, **Final Name**, routine type and collision details. **Use Existing** keeps the destination routine's current description. Choose **Overwrite** for that one routine only after confirming the logic matches and the description difference is the one approved. Inspect referenced components and keep their existing definitions. Cancel on an unexpected name, reference change or logic difference. [Rockwell routine import operations](https://www.rockwellautomation.com/en-us/docs/studio-5000-logix-designer/37-01/contents-ditamap/studio-5000-logix-designer/import-and-export/import-routine-considerations.html)
+4. Choose **OK**, verify the destination project in Studio and save the working copy. Reopen it, check the routine description and logic, and confirm any separately reviewed edits. Record the saved destination's absolute path and its own SHA-256 with `Get-FileHash -LiteralPath 'C:\Projects\Working copy.ACD'`. The receipt's ACD hash identifies the published complete project. The new hash identifies this Studio save.
+
 ### Open a reviewed full L5X documentation copy
 
 1. Keep the `review_id` from the successful interactive approval in your review notes. Keep the adjacent `.approval.json` file with the staged copy. The ID identifies the reviewed paths, hashes and proposed descriptions. The approval record identifies a local decision and carries no signer credentials. [Local review and approval](mcp-contract.md#local-review-and-approval)

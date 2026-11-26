@@ -244,6 +244,21 @@ Native review records the local decision, scoped before/after description, origi
 
 The clean SDK-free wheel passed all 60 applicable tests, with five optional vendor cases skipped. On Windows with Python 3.12 and Rockwell SDK wheel 2.0.2, Codex acted as the local test operator for a synthetic revision 38.02 routine description. The installed command passed readback and build, published the bundle, and returned the identical receipt through a second `--check` invocation. Both output hashes matched, and the original ACD retained SHA-256 `d4f900f333f132a171a591267e4c7c3c4a11c80ca256f2bbca3b9167700e245e`. A pre-record bundle was rejected by the check. LPM-023 is next for opening the reviewed ACD and importing the routine component in Studio.
 
+## 2026-11-25 · LPM-023 · Done · Codex on `main`
+
+On Windows 11, Logix Designer 38.02 opened a byte-identical working copy of the approved synthetic ACD. The installed native review command checked the retained review ID against the source and both outputs before and after the desktop test. [Studio walkthrough](../studio-5000-integration.md#open-a-reviewed-acd-or-import-its-routine)
+
+With a separate editor holding an unsaved change, the operator opened a fresh copy of the source and selected `MainProgram` in its Controller Organizer. Import Configuration showed the same-name `InspectText` routine, Structured Text, two lines, and the approved description. Selecting **Use Existing** and then **Cancel** returned to a clean destination. Repeating the import with **Overwrite** and saving produced a separate ACD. The first editor still showed its unsaved-change marker after the import and save. The operator then saved that disposable project separately and closed all three test windows.
+
+| File | SHA-256 |
+| --- | --- |
+| Source `Cache sample.ACD` | `d4f900f333f132a171a591267e4c7c3c4a11c80ca256f2bbca3b9167700e245e` |
+| Published `Reviewed.ACD` | `f7d7afb6d009570741054671472e9111ecd303b7a9df54efbd5aa063869f675f` |
+| Published `Routine.L5X` | `053bc4569141637653faf568ae1c0492c64372ff41da3c10bfa267828c6b70e6` |
+| Studio import result `McpHandoffClean.ACD` | `f81ae9ebc3c146e11eee02d4a7dc8c8b44d96903cc4fb5aa9b331131e2c80244` |
+
+Independent MCP reads through the installed wheel and Rockwell SDK 2.0.2 reopened the source, published ACD and Studio import result. All three identified controller `McpSnapshotSample` at software revision 38.02. Both edited copies contained the approved description, `Verified native review on synthetic project`, and the original routine's structured-text sections. The installed build checker passed the saved import result at its recorded SHA-256 with zero diagnostics. LPM-040 is next for native output recovery.
+
 ## Handoff entry template
 
 Add an entry with the date, task ID, status, owner, and branch or worktree. Record the result, verification evidence, outstanding limitations or blockers, and next ready task. Link files or runs that support the status.
